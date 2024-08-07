@@ -15,8 +15,6 @@ from design_matrix_linear import modelled_mmts_XYZ, modelparameters
 from ballplate_plots import single_grid_plot
 
 ballspacing = 133.0
-
-
 """
 0	TxxL
 1	TxyL
