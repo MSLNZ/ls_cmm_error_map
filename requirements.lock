@@ -19,6 +19,8 @@ contourpy==1.2.1
     # via matplotlib
 cycler==0.12.1
     # via matplotlib
+darkdetect==0.7.1
+    # via pyqtdarktheme
 debugpy==1.8.5
     # via ipykernel
 decorator==5.1.1
@@ -97,6 +99,8 @@ pyopengl-accelerate==3.1.7
     # via cmm-error-map
 pyparsing==3.1.2
     # via matplotlib
+pyqtdarktheme==2.1.0
+    # via cmm-error-map
 pyqtgraph==0.13.7
     # via cmm-error-map
 pyside6==6.7.2
