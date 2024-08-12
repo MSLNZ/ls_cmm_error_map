@@ -9,8 +9,34 @@
 # Copyright:   (c) e.howick 2013
 # Licence:     <your licence>
 # -------------------------------------------------------------------------------
-import pickle
 import numpy as np
+
+
+# TODO implement this throughout module
+model_parameters_dict = {
+    "Txx": 0.0,
+    "Txy": 0.0,
+    "Txz": 0.0,
+    "Tyx": 0.0,
+    "Tyy": 0.0,
+    "Tyz": 0.0,
+    "Tzx": 0.0,
+    "Tzy": 0.0,
+    "Tzz": 0.0,
+    "Rxx": 0.0,
+    "Rxy": 0.0,
+    "Rxz": 0.0,
+    "Ryx": 0.0,
+    "Ryy": 0.0,
+    "Ryz": 0.0,
+    "Rzx": 0.0,
+    "Rzy": 0.0,
+    "Rzz": 0.0,
+    "Wxy": 0.0,
+    "Wxz": 0.0,
+    "Wyz": 0.0,
+}
+
 
 ballspacing = 133.0
 posinfo = [
@@ -23,6 +49,32 @@ posinfo = [
     (7, "XY long", "X", "Y", 9, 10, 11, 4.76412, -193.69498, -355.41323, 0, 1, 2, 2),
     (8, "XY short", "X", "Y", 9, 10, 11, 4.76412, -193.69498, -355.41323, 0, 1, 2, 2),
 ]
+
+# descriptor, machine axis on which term is dependent, number of terms, axes (list) in which term appears, coefficients for term (list expressed as column of mmtinfo matrix), sign of coefficients
+modelparameters = [
+    ("Txx", 0, 5, (0,), (16,), (1,)),
+    ("Txy", 0, 5, (1,), (16,), (-1,)),
+    ("Txz", 0, 5, (2,), (16,), (-1,)),
+    ("Tyx", 1, 5, (0,), (16,), (-1,)),
+    ("Tyy", 1, 5, (1,), (16,), (1,)),
+    ("Tyz", 1, 5, (2,), (16,), (-1,)),
+    ("Tzx", 2, 4, (0,), (16,), (-1,)),
+    ("Tzy", 2, 4, (1,), (16,), (-1,)),
+    ("Tzz", 2, 4, (2,), (16,), (1,)),
+    ("Rxx", 0, 5, (1, 2), (15, 14), (1, -1)),
+    ("Rxy", 0, 5, (0, 2), (15, 13), (-1, 1)),
+    ("Rxz", 0, 5, (0, 1), (14, 13), (1, -1)),
+    ("Ryx", 1, 5, (1, 2), (15, 11), (1, -1)),
+    ("Ryy", 1, 5, (0, 2), (15, 10), (-1, 1)),
+    ("Ryz", 1, 5, (0, 1), (11, 10), (1, -1)),
+    ("Rzx", 2, 4, (1, 2), (12, 11), (1, -1)),
+    ("Rzy", 2, 4, (0, 2), (12, 10), (-1, 1)),
+    ("Rzz", 2, 4, (0, 1), (11, 10), (1, -1)),
+    ("Wxy", -1, 1, (0, 1), (14, 13), (-1, -1)),
+    ("Wxz", -1, 1, (0, 2), (15, 13), (-1, -1)),
+    ("Wyz", -1, 1, (1, 2), (15, 14), (-1, -1)),
+]
+
 
 """
     Linear Model Parameters
@@ -217,32 +269,6 @@ def machine_deformation(params, xt, yt, zt, spacing=200):
     XYZ_3D = np.reshape(XYZ, (nx, ny, nz, 3))
     eXYZ_3D = np.reshape(eXYZ, (nx, ny, nz, 3))
     return XYZ_3D, eXYZ_3D
-
-
-# descriptor, machine axis on which term is dependent, number of terms, axes (list) in which term appears, coefficients for term (list expressed as column of mmtinfo matrix), sign of coefficients
-modelparameters = [
-    ("Txx", 0, 5, (0,), (16,), (1,)),
-    ("Txy", 0, 5, (1,), (16,), (-1,)),
-    ("Txz", 0, 5, (2,), (16,), (-1,)),
-    ("Tyx", 1, 5, (0,), (16,), (-1,)),
-    ("Tyy", 1, 5, (1,), (16,), (1,)),
-    ("Tyz", 1, 5, (2,), (16,), (-1,)),
-    ("Tzx", 2, 4, (0,), (16,), (-1,)),
-    ("Tzy", 2, 4, (1,), (16,), (-1,)),
-    ("Tzz", 2, 4, (2,), (16,), (1,)),
-    ("Rxx", 0, 5, (1, 2), (15, 14), (1, -1)),
-    ("Rxy", 0, 5, (0, 2), (15, 13), (-1, 1)),
-    ("Rxz", 0, 5, (0, 1), (14, 13), (1, -1)),
-    ("Ryx", 1, 5, (1, 2), (15, 11), (1, -1)),
-    ("Ryy", 1, 5, (0, 2), (15, 10), (-1, 1)),
-    ("Ryz", 1, 5, (0, 1), (11, 10), (1, -1)),
-    ("Rzx", 2, 4, (1, 2), (12, 11), (1, -1)),
-    ("Rzy", 2, 4, (0, 2), (12, 10), (-1, 1)),
-    ("Rzz", 2, 4, (0, 1), (11, 10), (1, -1)),
-    ("Wxy", -1, 1, (0, 1), (14, 13), (-1, -1)),
-    ("Wxz", -1, 1, (0, 2), (15, 13), (-1, -1)),
-    ("Wyz", -1, 1, (1, 2), (15, 14), (-1, -1)),
-]
 
 
 def design_matrix_linear(mmtinfo):

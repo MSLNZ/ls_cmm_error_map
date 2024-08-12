@@ -25,12 +25,15 @@ def plot_model3d(w: gl.GLViewWidget, params, xt, yt, zt, mag, col="white"):
 
     nx, ny, nz = XYZ.shape[:3]
 
+    nlines = 0
+
     # lines parallel to x axis
     for j in range(ny):
         for k in range(nz):
             pts = pXYZ_3D[:, j, k, :]
             plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
             w.addItem(plt)
+            nlines += 1
 
     # lines parallel to y axis
     for i in range(nx):
@@ -38,6 +41,7 @@ def plot_model3d(w: gl.GLViewWidget, params, xt, yt, zt, mag, col="white"):
             pts = pXYZ_3D[i, :, k, :]
             plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
             w.addItem(plt)
+            nlines += 1
 
     # lines parallel to z axis
     for i in range(nx):
@@ -45,7 +49,9 @@ def plot_model3d(w: gl.GLViewWidget, params, xt, yt, zt, mag, col="white"):
             pts = pXYZ_3D[i, j, :, :]
             plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
             w.addItem(plt)
+            nlines += 1
 
+    plt.width = 4
     return XYZ, eXYZ
 
 
@@ -54,13 +60,6 @@ w = gl.GLViewWidget()
 w.show()
 w.setWindowTitle("CMM 3D Deformation")
 
-xlabel = gl.GLTextItem(pos=(400.0, 0.0, 0.0), text="X")
-w.addItem(xlabel)
-ylabel = gl.GLTextItem(pos=(0.0, 300.0, 0.0), text="Y")
-w.addItem(ylabel)
-zlabel = gl.GLTextItem(pos=(0.0, 0.0, 300.0), text="Z")
-w.addItem(zlabel)
-
 
 # origin
 
@@ -68,6 +67,8 @@ org = gl.GLScatterPlotItem(
     pos=(0, 0, 0), size=20, color=pg.mkColor("white"), pxMode=False
 )
 w.addItem(org)
+
+
 w.setCameraPosition(distance=2000)
 
 
@@ -92,6 +93,21 @@ params[17] = 4.78e-08
 # undeformed for comparison
 plot_model3d(w, params0, 100, 100, 100, 1, col="green")
 plot_model3d(w, params, 100, 100, 100, 5000, col="blue")
+
+# axis
+axis = gl.GLAxisItem()
+axis.setSize(x=1000, y=700, z=700)
+# setattr(axis, "width", 20)
+
+w.addItem(axis)
+
+
+xlabel = gl.GLTextItem(pos=(1000.0, 0.0, 0.0), text="X")
+w.addItem(xlabel)
+ylabel = gl.GLTextItem(pos=(0.0, 700.0, 0.0), text="Y")
+w.addItem(ylabel)
+zlabel = gl.GLTextItem(pos=(0.0, 0.0, 700.0), text="Z")
+w.addItem(zlabel)
 
 if __name__ == "__main__":
     pg.exec()

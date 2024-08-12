@@ -11,64 +11,18 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 import pyqtgraph as pg
 
+import pyqtgraph.opengl as gl
+
 import qdarktheme
 
 import cmm_error_map.design_matrix_linear_fixed as design
-
-main_params = [
-    {
-        "title": "Basic parameter data types",
-        "name": "p1",
-        "type": "group",
-        "children": [
-            {
-                "name": "Boolean",
-                "type": "bool",
-                "value": True,
-                "tip": "This is a checkbox",
-            },
-            {
-                "name": "str",
-                "type": "str",
-                "value": "hello",
-            },
-            {
-                "name": "Color",
-                "type": "color",
-                "value": "#4c0027",
-                "tip": "This is a color selector",
-            },
-            {
-                "name": "float",
-                "type": "float",
-                "value": "1066.3",
-                "decimals": 2,
-                "limits": [0.01, None],
-                "format": "{value:.1f}",
-            },
-            {
-                "name": "list",
-                "type": "list",
-                "limits": ["A", "B", "C"],
-            },
-            {
-                "name": "check list",
-                "type": "checklist",
-                "limits": ["A", "B", "C"],
-            },
-            {
-                "name": "select file",
-                "type": "file",
-                "directory": "C:/",
-            },
-        ],
-    }
-]
+import cmm_error_map.gui_cmpts as gc
 
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
+        self.model_params = design.model_parameters_dict.copy()
         self.setup_gui()
         self.add_parameter_tree()
         self.make_docks()
@@ -78,9 +32,9 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area = DockArea()
 
         self.tree = ParameterTree(showHeader=False)
-        # self.tree.setContentsMargins(0, 0, 0, 0)
-        # self.tree.header().setStretchLastSection(False)
-        # self.tree.header().setMinimumSectionSize(170)
+        self.tree.setContentsMargins(0, 0, 0, 0)
+        self.tree.header().setStretchLastSection(True)
+        self.tree.header().setMinimumSectionSize(100)
 
         self.summary = qtw.QTextEdit()
 
@@ -107,8 +61,23 @@ class MainWindow(qtw.QMainWindow):
         self.param = Parameter.create(name="params", type="group")
         # create sliders
         slider_group = self.param.addChild(dict(type="group", name="Linear Model"))
+        x_axis = slider_group.addChild(
+            dict(type="group", name="X axis", expanded=False)
+        )
+        y_axis = slider_group.addChild(
+            dict(type="group", name="Y axis", expanded=False)
+        )
+        z_axis = slider_group.addChild(
+            dict(type="group", name="Z axis", expanded=False)
+        )
+        squareness = slider_group.addChild(
+            dict(type="group", name="Squareness", expanded=False)
+        )
+        axes = [x_axis, y_axis, z_axis, squareness]
+
         for p in design.modelparameters:
-            slider_group.addChild(
+            # the 2nd entry in the modelparmeters is the dependent axis
+            axes[p[1]].addChild(
                 dict(
                     type="slider",
                     name=p[0],
@@ -117,10 +86,9 @@ class MainWindow(qtw.QMainWindow):
                     value=0,
                 )
             )
-        # spacers
-        slider_group.insertChild(
-            3, dict(type="str", name="spacer", title="", value="", readonly=True)
-        )
+
+        slider_group.sigTreeStateChanged.connect(self.update_model)
+
         self.tree.setParameters(self.param, showTop=False)
 
     def make_docks(self):
@@ -132,9 +100,9 @@ class MainWindow(qtw.QMainWindow):
         table_dock.addWidget(self.table)
         self.dock_area.addDock(table_dock)
 
-        self.plot_data, self.plot = self.make_plot()
+        self.plotlines3d, self.plot3d = self.make_plot3d()
         plot_dock = Dock("Plot")
-        plot_dock.addWidget(self.plot)
+        plot_dock.addWidget(self.plot3d)
         self.dock_area.addDock(plot_dock)
 
     def make_table(self):
@@ -155,6 +123,40 @@ class MainWindow(qtw.QMainWindow):
         plot_data = np.random.normal(size=100)
         plot = pg.plot(plot_data, title="Simplest possible plotting example")
         return plot_data, plot
+
+    def make_plot3d(self):
+        """
+        plot the 3d deformation of the CMM volume
+        """
+        plot3d = gl.GLViewWidget()
+        # TODO define CMM size and display spacing (xt, yt, zt)
+        xt = 100
+        yt = 100
+        zt = 100
+        # undeformed
+        gc.plot_model3d(plot3d, xt, yt, zt, col="green")
+        # deformed
+        plotlines = gc.plot_model3d(plot3d, xt, yt, zt, col="blue")
+        return plotlines, plot3d
+
+    def update_model(self, group, changes):
+        """
+        event callback for sliders
+        """
+        slider_name = changes[0][0].name()
+        slider_value = changes[0][2]
+        slider_factor = gc.slider_factors[slider_name]
+        self.model_params[slider_name] = slider_value * slider_factor
+        self.update_plot3d()
+
+    def update_plot3d(self):
+        # TODO define CMM size and display spacing (xt, yt, zt)
+        xt = 100
+        yt = 100
+        zt = 100
+        # TODO add slider for magnification
+        mag = 5000
+        gc.update_plot_model3d(self.plotlines3d, self.model_params, xt, yt, zt, mag)
 
     def add_summary(self):
         text = "Summary\n"
