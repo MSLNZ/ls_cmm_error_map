@@ -25,14 +25,14 @@ class MainWindow(qtw.QMainWindow):
         self.model_params = design.model_parameters_dict.copy()
         self.slider_mag = 5000
         self.setup_gui()
-        self.make_sliders()
+        self.make_model_controls()
         self.add_startup_docks()
         self.add_summary()
 
     def setup_gui(self):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
-        self.slider_params, self.slider_tree = self.make_sliders()
+        self.slider_params, self.slider_tree = self.make_model_controls()
 
         v_split = qtw.QSplitter(qtc.Vertical)
         v_split.addWidget(self.slider_tree)
@@ -53,10 +53,12 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
-    def make_sliders(self) -> (Parameter, ParameterTree):
+    def make_model_controls(self) -> (Parameter, ParameterTree):
         slider_params = Parameter.create(name="params", type="group")
         # create sliders
-        slider_group = slider_params.addChild(dict(type="group", name="Linear Model"))
+        slider_group = slider_params.addChild(
+            dict(type="group", title="Linear Model", name="linear_model")
+        )
         x_axis = slider_group.addChild(
             dict(type="group", name="X axis", expanded=False)
         )
@@ -77,11 +79,16 @@ class MainWindow(qtw.QMainWindow):
                 dict(
                     type="slider",
                     name=p[0],
+                    title=p[0],
                     limits=[-5.0, 5.0],
                     step=0.1,
                     value=0,
                 )
             )
+
+        slider_group.addChild(
+            dict(type="action", name="btn_reset_all", title="Reset All")
+        )
 
         slider_group.sigTreeStateChanged.connect(self.update_model)
         slider_tree = ParameterTree(showHeader=False)
@@ -151,13 +158,22 @@ class MainWindow(qtw.QMainWindow):
         """
         event callback for sliders
         """
-        slider_name = changes[0][0].name()
+        contorl_name = changes[0][0].name()
         slider_value = changes[0][2]
-        if slider_name != "slider_mag":
-            slider_factor = gc.slider_factors[slider_name]
-            self.model_params[slider_name] = slider_value * slider_factor
-        else:
+        if contorl_name in design.model_parameters_dict.keys():
+            slider_factor = gc.slider_factors[contorl_name]
+            self.model_params[contorl_name] = slider_value * slider_factor
+        elif contorl_name == "slider_mag":
             self.slider_mag = slider_value
+        elif contorl_name == "btn_reset_all":
+            self.model_params = design.model_parameters_dict.copy()
+            # update sliders
+            with self.slider_params.treeChangeBlocker():
+                for axis_group in self.slider_params.child("linear_model").children():
+                    for child in axis_group.children():
+                        child.setValue(0.0)
+                        print(f"{child.name()}")
+
         self.update_plot3d()
 
     def update_plot3d(self):
