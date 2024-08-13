@@ -172,7 +172,6 @@ class MainWindow(qtw.QMainWindow):
                 for axis_group in self.slider_params.child("linear_model").children():
                     for child in axis_group.children():
                         child.setValue(0.0)
-                        print(f"{child.name()}")
 
         self.update_plot3d()
 
