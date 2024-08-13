@@ -29,7 +29,7 @@ slider_factors = {
 }
 
 
-def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white"):
+def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list:
     """
     produces a 3D magniifed plot of the undeformed machine ready for updating with
     deformation via update_plot_model3d
