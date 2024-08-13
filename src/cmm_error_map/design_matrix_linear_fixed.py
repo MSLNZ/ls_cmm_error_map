@@ -11,8 +11,6 @@
 # -------------------------------------------------------------------------------
 import numpy as np
 
-
-# TODO implement this throughout module
 model_parameters_dict = {
     "Txx": 0.0,
     "Txy": 0.0,

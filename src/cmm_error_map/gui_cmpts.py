@@ -34,7 +34,6 @@ def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white"):
     produces a 3D magniifed plot of the undeformed machine ready for updating with
     deformation via update_plot_model3d
     """
-    # TODO use dataclass ModelParameters
     params = [0.0] * 21
     XYZ, eXYZ = design.machine_deformation(params, xt, yt, zt)
     pXYZ_3D = XYZ + eXYZ
@@ -93,7 +92,6 @@ def update_plot_model3d(plot_lines: list, params: dict, xt, yt, zt, mag):
     """
     update a plot produced by plot_model3d with a new set of params
     """
-    # TODO use dict ModelParameters
     pars = list(params.values())
 
     XYZ, eXYZ = design.machine_deformation(pars, xt, yt, zt)

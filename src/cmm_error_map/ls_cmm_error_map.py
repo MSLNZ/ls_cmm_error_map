@@ -23,23 +23,19 @@ class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.model_params = design.model_parameters_dict.copy()
+        self.slider_mag = 5000
         self.setup_gui()
-        self.add_parameter_tree()
-        self.make_docks()
+        self.make_sliders()
+        self.add_startup_docks()
         self.add_summary()
 
     def setup_gui(self):
         self.dock_area = DockArea()
-
-        self.tree = ParameterTree(showHeader=False)
-        self.tree.setContentsMargins(0, 0, 0, 0)
-        self.tree.header().setStretchLastSection(True)
-        self.tree.header().setMinimumSectionSize(100)
-
         self.summary = qtw.QTextEdit()
+        self.slider_params, self.slider_tree = self.make_sliders()
 
         v_split = qtw.QSplitter(qtc.Vertical)
-        v_split.addWidget(self.tree)
+        v_split.addWidget(self.slider_tree)
         v_split.addWidget(self.summary)
         v_split.setSizes([200, 100])
 
@@ -57,10 +53,10 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
-    def add_parameter_tree(self):
-        self.param = Parameter.create(name="params", type="group")
+    def make_sliders(self) -> (Parameter, ParameterTree):
+        slider_params = Parameter.create(name="params", type="group")
         # create sliders
-        slider_group = self.param.addChild(dict(type="group", name="Linear Model"))
+        slider_group = slider_params.addChild(dict(type="group", name="Linear Model"))
         x_axis = slider_group.addChild(
             dict(type="group", name="X axis", expanded=False)
         )
@@ -88,43 +84,43 @@ class MainWindow(qtw.QMainWindow):
             )
 
         slider_group.sigTreeStateChanged.connect(self.update_model)
+        slider_tree = ParameterTree(showHeader=False)
+        slider_tree.setContentsMargins(0, 0, 0, 0)
+        slider_tree.header().setStretchLastSection(True)
+        slider_tree.header().setMinimumSectionSize(100)
+        slider_tree.setParameters(slider_params, showTop=False)
+        return slider_params, slider_tree
 
-        self.tree.setParameters(self.param, showTop=False)
-
-    def make_docks(self):
-        """
-        add a table and a plot in separate docks
-        """
-        self.table_data, self.table = self.make_table()
-        table_dock = Dock("Data Table")
-        table_dock.addWidget(self.table)
-        self.dock_area.addDock(table_dock)
-
-        self.plotlines3d, self.plot3d = self.make_plot3d()
-        plot_dock = Dock("Plot")
-        plot_dock.addWidget(self.plot3d)
-        self.dock_area.addDock(plot_dock)
-
-    def make_table(self):
-        table = pg.TableWidget(editable=False, sortable=True)
-        data = np.array(
-            [
-                (1, 1.6, "x"),
-                (3, 5.4, "y"),
-                (8, 12.5, "z"),
-                (443, 1e-12, "w"),
-            ],
-            dtype=[("Column 1", int), ("Column 2", float), ("Column 3", object)],
+    def make_3d_plot_controls(self) -> (Parameter, ParameterTree):
+        plot3d_params = Parameter.create(name="params", type="group")
+        x = np.array([1, 2, 5, 7.5])
+        span = np.hstack((x, x * 10, x * 100, x * 1000, [10000]))
+        plot_controls = plot3d_params.addChild(
+            dict(type="group", name="plot_controls", title="Plot Controls")
         )
-        table.setData(data)
-        return data, table
+        plot_controls.addChild(
+            dict(
+                type="slider",
+                name="slider_mag",
+                title="Magnification",
+                span=span,
+                value=5000,
+            )
+        )
+        plot_controls.sigTreeStateChanged.connect(self.update_model)
+        plot3d_tree = ParameterTree(showHeader=False)
+        plot3d_tree.setParameters(plot3d_params, showTop=False)
+        return plot3d_params, plot3d_tree
 
-    def make_plot(self):
-        plot_data = np.random.normal(size=100)
-        plot = pg.plot(plot_data, title="Simplest possible plotting example")
-        return plot_data, plot
+    def add_startup_docks(self):
+        """
+        add the 3d plot dock
+        """
+        self.plotlines3d, self.plot3d = self.make_plot3d()
+        self.plot3d_params, self.plot3d_tree = self.make_3d_plot_controls()
+        self.make_plot_dock(self.plot3d_tree, self.plot3d, "3d Deformation")
 
-    def make_plot3d(self):
+    def make_plot3d(self) -> (list, gl.GLViewWidget):
         """
         plot the 3d deformation of the CMM volume
         """
@@ -139,14 +135,29 @@ class MainWindow(qtw.QMainWindow):
         plotlines = gc.plot_model3d(plot3d, xt, yt, zt, col="blue")
         return plotlines, plot3d
 
+    def make_plot_dock(self, tree: ParameterTree, plot: gl.GLViewWidget, title: str):
+        """
+        add a dock with a parameter tree and a plot
+        """
+        h_split = qtw.QSplitter(qtc.Horizontal)
+        h_split.addWidget(tree)
+        h_split.addWidget(plot)
+        # h_split.setSizes([150, 600])
+        plot_dock = Dock("Plot - side bar")
+        plot_dock.addWidget(h_split)
+        self.dock_area.addDock(plot_dock)
+
     def update_model(self, group, changes):
         """
         event callback for sliders
         """
         slider_name = changes[0][0].name()
         slider_value = changes[0][2]
-        slider_factor = gc.slider_factors[slider_name]
-        self.model_params[slider_name] = slider_value * slider_factor
+        if slider_name != "slider_mag":
+            slider_factor = gc.slider_factors[slider_name]
+            self.model_params[slider_name] = slider_value * slider_factor
+        else:
+            self.slider_mag = slider_value
         self.update_plot3d()
 
     def update_plot3d(self):
@@ -154,9 +165,9 @@ class MainWindow(qtw.QMainWindow):
         xt = 100
         yt = 100
         zt = 100
-        # TODO add slider for magnification
-        mag = 5000
-        gc.update_plot_model3d(self.plotlines3d, self.model_params, xt, yt, zt, mag)
+        gc.update_plot_model3d(
+            self.plotlines3d, self.model_params, xt, yt, zt, self.slider_mag
+        )
 
     def add_summary(self):
         text = "Summary\n"

@@ -10,4 +10,4 @@ This will help with using the ball-plate and gauge blocks to assess the CMM unce
 - 2024-08-05 - `modelled_mmts_XYZ_with_sliders.py` old matplotlib version running on up to date versions of python (3.11) and dependencies
 - 2024-08-07 - `plot_3d.py` pyqtgraph 3d plot of CMM deformation
 - 2024-08-08 - `ls_cmm_error_map.py` beginnings of pyqt gui
-- 2024-08-12 - basic 3d deformation plot with sliders workig
+- 2024-08-12 - basic 3d deformation plot with sliders working
