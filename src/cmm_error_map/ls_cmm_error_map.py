@@ -18,24 +18,41 @@ import qdarktheme
 import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.gui_cmpts as gc
 
+# TODO expand this structure to incldude aretaft parameters
+default_artefacts = {"MSL Ballplate A": 0}
+
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.model_params = design.model_parameters_dict.copy()
+        self.artefacts = default_artefacts
         self.slider_mag = 5000
         self.setup_gui()
-        self.make_model_controls()
         self.add_startup_docks()
         self.add_summary()
 
     def setup_gui(self):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
-        self.slider_params, self.slider_tree = self.make_model_controls()
+        self.slider_group = self.make_model_sliders()
+        self.control_group = Parameter.create(type="group", name="main_controls")
+        self.control_group.addChild(self.slider_group)
+        # other controls
+        btn_plot = self.control_group.addChild(
+            type="action", name="btn_plot", title="Add Plot"
+        )
+        btn_plot.sigActivated.connect(self.add_new_plot_dock)
+
+        self.control_tree = ParameterTree(showHeader=False)
+        self.control_tree.setContentsMargins(0, 0, 0, 0)
+        self.control_tree.header().setStretchLastSection(True)
+        self.control_tree.header().setMinimumSectionSize(100)
+
+        self.control_tree.setParameters(self.control_group, showTop=False)
 
         v_split = qtw.QSplitter(qtc.Vertical)
-        v_split.addWidget(self.slider_tree)
+        v_split.addWidget(self.control_tree)
         v_split.addWidget(self.summary)
         v_split.setSizes([200, 100])
 
@@ -53,11 +70,10 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
-    def make_model_controls(self) -> (Parameter, ParameterTree):
-        slider_params = Parameter.create(name="params", type="group")
+    def make_model_sliders(self) -> (Parameter, ParameterTree):
         # create sliders
-        slider_group = slider_params.addChild(
-            dict(type="group", title="Linear Model", name="linear_model")
+        slider_group = Parameter.create(
+            type="group", title="Linear Model", name="linear_model"
         )
         x_axis = slider_group.addChild(
             dict(type="group", name="X axis", expanded=False)
@@ -91,14 +107,14 @@ class MainWindow(qtw.QMainWindow):
         )
 
         slider_group.sigTreeStateChanged.connect(self.update_model)
-        slider_tree = ParameterTree(showHeader=False)
-        slider_tree.setContentsMargins(0, 0, 0, 0)
-        slider_tree.header().setStretchLastSection(True)
-        slider_tree.header().setMinimumSectionSize(100)
-        slider_tree.setParameters(slider_params, showTop=False)
-        return slider_params, slider_tree
+
+        return slider_group
 
     def make_3d_plot_controls(self) -> (Parameter, ParameterTree):
+        """
+        returns the controls that go in the sidebar of the 3d plot
+        """
+
         plot3d_params = Parameter.create(name="params", type="group")
         x = np.array([1, 2, 5, 7.5])
         span = np.hstack((x, x * 10, x * 100, x * 1000, [10000]))
@@ -150,7 +166,7 @@ class MainWindow(qtw.QMainWindow):
         h_split.addWidget(tree)
         h_split.addWidget(plot)
         # h_split.setSizes([150, 600])
-        plot_dock = Dock("Plot - side bar")
+        plot_dock = Dock(title)
         plot_dock.addWidget(h_split)
         self.dock_area.addDock(plot_dock)
 
@@ -168,8 +184,8 @@ class MainWindow(qtw.QMainWindow):
         elif contorl_name == "btn_reset_all":
             self.model_params = design.model_parameters_dict.copy()
             # update sliders
-            with self.slider_params.treeChangeBlocker():
-                for axis_group in self.slider_params.child("linear_model").children():
+            with self.slider_group.treeChangeBlocker():
+                for axis_group in self.slider_group.child("linear_model").children():
                     for child in axis_group.children():
                         child.setValue(0.0)
 
@@ -180,9 +196,63 @@ class MainWindow(qtw.QMainWindow):
         xt = 100
         yt = 100
         zt = 100
-        gc.update_plot_model3d(
-            self.plotlines3d, self.model_params, xt, yt, zt, self.slider_mag
+        try:
+            gc.update_plot_model3d(
+                self.plotlines3d,
+                self.model_params,
+                xt,
+                yt,
+                zt,
+                self.slider_mag,
+            )
+        except AttributeError:
+            # plot not created yet
+            pass
+
+    # 2d plots, can have lots of these
+
+    def make_2d_plot_controls(self):
+        """
+        returns the controls that go in the side bar of each 2d plot
+        """
+        plot2d_params = Parameter.create(name="params", type="group")
+        plot2d_params.addChild(
+            dict(
+                type="list",
+                name="artefact",
+                title="artefact type",
+                limits=self.artefacts,
+            )
         )
+        plot2d_params.addChild(gc.grp_position)
+        plot2d_params.addChild(gc.grp_plate_dirn)
+        plot2d_tree = ParameterTree(showHeader=False)
+        plot2d_tree.setParameters(plot2d_params, showTop=False)
+        return plot2d_params, plot2d_tree
+
+    def make_plot2d(self) -> (list, gl.GLViewWidget):
+        """
+        plot the 2d deformation of the artefact
+        """
+        plot3d = gl.GLViewWidget()
+        # TODO define CMM size and display spacing (xt, yt, zt)
+        xt = 100
+        yt = 100
+        zt = 100
+        # undeformed
+        gc.plot_model3d(plot3d, xt, yt, zt, col="green")
+        # deformed
+        plotlines = gc.plot_model3d(plot3d, xt, yt, zt, col="blue")
+        return plotlines, plot3d
+
+    def add_new_plot2d_dock(self):
+        """
+        create a new plot dock
+        type of plot etc is set from side bar on dock
+        """
+        plot2d_params, plot2d_tree = self.make_2d_plot_controls()
+
+        self.make_plot_dock(plot2d_tree, plot)
 
     def add_summary(self):
         text = "Summary\n"

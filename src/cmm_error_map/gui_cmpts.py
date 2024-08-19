@@ -1,5 +1,8 @@
 import pyqtgraph as pg
+from pyqtgraph.Qt.QtCore import Qt as qtc
+import pyqtgraph.Qt.QtWidgets as qtw
 import pyqtgraph.opengl as gl
+from pyqtgraph.dockarea.Dock import Dock
 
 import cmm_error_map.design_matrix_linear_fixed as design
 
@@ -27,6 +30,8 @@ slider_factors = {
     "Wxz": 1e-8,
     "Wyz": 1e-8,
 }
+
+
 
 
 def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list:
@@ -120,3 +125,83 @@ def update_plot_model3d(plot_lines: list, params: dict, xt, yt, zt, mag):
             pts = pXYZ_3D[i, j, :, :]
             plot_lines[pn].setData(pos=pts)
             pn += 1
+
+# 2D Plots
+
+# parameter structures for 2d plot controls
+grp_position = {
+    "title": "Position",
+    "name": "grp_position",
+    "type": "group",
+    "children": [
+        {"name": "X", "type": "float", "value": 0.0},
+        {"name": "Y", "type": "float", "value": 0.0},
+        {"name": "Z", "type": "float", "value": 0.0},
+    ],
+}
+grp_plate_dirn = {
+    "title": "Plate Orientation",
+    "name": "grp_plate_dirn",
+    "type": "group",
+    "children": [
+        {
+            "name": "x-axis",
+            "type": "group",
+            "children": [
+                {"name": "i", "type": "float", "value": 1.0},
+                {"name": "j", "type": "float", "value": 0.0},
+                {"name": "k", "type": "float", "value": 0.0},
+            ],
+        },
+        {
+            "name": "z-axis",
+            "type": "group",
+            "children": [
+                {"name": "i", "type": "float", "value": 0.0},
+                {"name": "j", "type": "float", "value": 0.0},
+                {"name": "k", "type": "float", "value": 1.0},
+            ],
+        },
+    ],
+}
+
+
+class Plot2dDock(Dock):
+    """
+    a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
+    knows how to draw an update itself based on the values in parameter tree
+    """
+    def __init__(self, title):
+        super(Plot2dDock, self).__init__()
+        h_split = qtw.QSplitter(qtc.Horizontal)
+        self.plot_params, self.tree = self.make_control_tree()
+        self.plot = 
+        h_split.addWidget(self.tree)
+        h_split.addWidget(self.plot)
+        self.addWidget(h_split)
+
+    def make_control_tree(self):
+        """
+        returns the controls that go in the side bar of each 2d plot
+        """
+        plot2d_params = Parameter.create(name="params", type="group")
+        plot2d_params.addChild(
+            dict(
+                type="list",
+                name="artefact",
+                title="artefact type",
+                limits=self.artefacts,
+            )
+        )
+        plot2d_params.addChild(gc.grp_position)
+        plot2d_params.addChild(gc.grp_plate_dirn)
+        plot2d_tree = ParameterTree(showHeader=False)
+        plot2d_tree.setParameters(plot2d_params, showTop=False)
+        return plot2d_params, plot2d_tree
+
+    def make_plot(self) -> (list, gl.GLViewWidget):
+        """
+        plot the 2d deformation of the artefact
+        """
+
+        return plotlines, plot3d

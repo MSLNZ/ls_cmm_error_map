@@ -12,4 +12,4 @@ This will help with using the ball-plate and gauge blocks to assess the CMM unce
 - 2024-08-08 - `ls_cmm_error_map.py` beginnings of pyqt gui
 - 2024-08-12 - basic 3d deformation plot with sliders working
 - 2024-08-13 - further gui work, move plot parameters to each plot dock etc.
-- 2024-08-14 - basic pyqtgraph plpot of ballplate error working `plot_ballplate.py` - needs styling
+- 2024-08-14 - basic pyqtgraph plot of ballplate error working `plot_ballplate.py` - needs styling
