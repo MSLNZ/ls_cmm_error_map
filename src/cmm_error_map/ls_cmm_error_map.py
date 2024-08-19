@@ -18,15 +18,12 @@ import qdarktheme
 import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.gui_cmpts as gc
 
-# TODO expand this structure to incldude aretaft parameters
-default_artefacts = {"MSL Ballplate A": 0}
-
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.model_params = design.model_parameters_dict.copy()
-        self.artefacts = default_artefacts
+
         self.slider_mag = 5000
         self.setup_gui()
         self.add_startup_docks()
@@ -40,9 +37,9 @@ class MainWindow(qtw.QMainWindow):
         self.control_group.addChild(self.slider_group)
         # other controls
         btn_plot = self.control_group.addChild(
-            type="action", name="btn_plot", title="Add Plot"
+            dict(type="action", name="btn_plot", title="Add Plot")
         )
-        btn_plot.sigActivated.connect(self.add_new_plot_dock)
+        btn_plot.sigActivated.connect(self.add_new_plot2d_dock)
 
         self.control_tree = ParameterTree(showHeader=False)
         self.control_tree.setContentsMargins(0, 0, 0, 0)
@@ -209,50 +206,14 @@ class MainWindow(qtw.QMainWindow):
             # plot not created yet
             pass
 
-    # 2d plots, can have lots of these
-
-    def make_2d_plot_controls(self):
-        """
-        returns the controls that go in the side bar of each 2d plot
-        """
-        plot2d_params = Parameter.create(name="params", type="group")
-        plot2d_params.addChild(
-            dict(
-                type="list",
-                name="artefact",
-                title="artefact type",
-                limits=self.artefacts,
-            )
-        )
-        plot2d_params.addChild(gc.grp_position)
-        plot2d_params.addChild(gc.grp_plate_dirn)
-        plot2d_tree = ParameterTree(showHeader=False)
-        plot2d_tree.setParameters(plot2d_params, showTop=False)
-        return plot2d_params, plot2d_tree
-
-    def make_plot2d(self) -> (list, gl.GLViewWidget):
-        """
-        plot the 2d deformation of the artefact
-        """
-        plot3d = gl.GLViewWidget()
-        # TODO define CMM size and display spacing (xt, yt, zt)
-        xt = 100
-        yt = 100
-        zt = 100
-        # undeformed
-        gc.plot_model3d(plot3d, xt, yt, zt, col="green")
-        # deformed
-        plotlines = gc.plot_model3d(plot3d, xt, yt, zt, col="blue")
-        return plotlines, plot3d
-
     def add_new_plot2d_dock(self):
         """
         create a new plot dock
         type of plot etc is set from side bar on dock
+        can have lots of these
         """
-        plot2d_params, plot2d_tree = self.make_2d_plot_controls()
-
-        self.make_plot_dock(plot2d_tree, plot)
+        new_plot_dock = gc.Plot2dDock("New Dock")
+        self.dock_area.addDock(new_plot_dock)
 
     def add_summary(self):
         text = "Summary\n"

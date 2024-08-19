@@ -123,8 +123,6 @@ def plot_ballplate(params, mag, lines=True, circles=True):
 
     return pw
 
-    return
-
 
 app = pg.mkQApp("Ballplate Errors")
 
