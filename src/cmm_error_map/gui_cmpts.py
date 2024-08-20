@@ -34,6 +34,9 @@ slider_factors = {
     "Wyz": 1e-8,
 }
 
+x = np.array([1, 2, 5, 7.5])
+magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
+
 
 # MARK: 3D plots
 
@@ -183,7 +186,8 @@ default_artefacts = {"MSL Ballplate A": 0}
 
 def single_grid_plot_data(dxy, mag, lines=True, circles=True):
     """
-    wrangles the data from the model into the right shape for plotting
+    drawing red crosses on out of tolerance point commented out
+    until I figure how to update them (number of red crosses can change)
     dxy shape(25,2) or shape (20,2) single set of data to plot on current figure
     in order of ballnumber
     """
@@ -202,27 +206,26 @@ def single_grid_plot_data(dxy, mag, lines=True, circles=True):
             data.append((xplot[xplaten[:] == i], yplot[xplaten[:] == i]))
             data.append((xplot[yplaten[:] == i], yplot[yplaten[:] == i]))
 
-    if circles:
-        # find points outside circles and mark with cross
-        ballnumber = np.arange(dxy.shape[0])
-        xplaten = (ballnumber) % 5
-        yplaten = (ballnumber) // 5
-        xcirc = xplaten * ballspacing
-        ycirc = yplaten * ballspacing
-        rcirc = mag * (U95 + ((xcirc**2 + ycirc**2) ** 0.5) / 400.0) * 1e-3
-        err = (dxy[:, 0] ** 2 + dxy[:, 1] ** 2) ** 0.5
-        xout = xplot[err > rcirc / mag]
-        yout = yplot[err > rcirc / mag]
-        data.append((xout, yout))
+    # if circles:
+    #     # find points outside circles and mark with cross
+    #     ballnumber = np.arange(dxy.shape[0])
+    #     xplaten = (ballnumber) % 5
+    #     yplaten = (ballnumber) // 5
+    #     xcirc = xplaten * ballspacing
+    #     ycirc = yplaten * ballspacing
+    #     rcirc = mag * (U95 + ((xcirc**2 + ycirc**2) ** 0.5) / 400.0) * 1e-3
+    #     err = (dxy[:, 0] ** 2 + dxy[:, 1] ** 2) ** 0.5
+    #     xout = xplot[err > rcirc / mag]
+    #     yout = yplot[err > rcirc / mag]
+    #     # data.append((xout, yout))
     return data
 
 
-def plot_ballplate(params, mag, lines=True, circles=True):
+def plot_ballplate(lines=True, circles=True):
     """
     pyqtgraph 2d pot of ballplate errors
     takes a set of model parameters and produces a 2D magniifed plot of errors in ballplate mmt
     """
-
     # XZ plane
     RP = np.array(
         [
@@ -234,12 +237,14 @@ def plot_ballplate(params, mag, lines=True, circles=True):
     )
 
     lineplots = []
-    pw = pg.PlotWidget(name="XZ")
+    plotw = pg.PlotWidget(name="XZ")
     xt, yt, zt = 0.0, 130.0, -243.4852
+    params = [0.0] * 21
+    mag = 1
     dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, params)
     data = single_grid_plot_data(dxy, mag)
     di = 0
-    p1 = pw.plot(
+    p1 = plotw.plot(
         x=data[di][0],
         y=data[di][1],
         pen=None,
@@ -250,10 +255,10 @@ def plot_ballplate(params, mag, lines=True, circles=True):
 
     if lines:
         for i in range(0, 5):
-            p2 = pw.plot(x=data[di][0], y=data[di][1])
+            p2 = plotw.plot(x=data[di][0], y=data[di][1])
             di += 1
             lineplots.append(p2)
-            p3 = pw.plot(x=data[di][0], y=data[di][1])
+            p3 = plotw.plot(x=data[di][0], y=data[di][1])
             di += 1
             lineplots.append(p3)
 
@@ -268,27 +273,27 @@ def plot_ballplate(params, mag, lines=True, circles=True):
         # U95 = 1.2 + L/400 is hardcoded here
         rcirc = mag * (U95 + ((xcirc**2 + ycirc**2) ** 0.5) / 400.0) * 1e-3
 
-        p4 = pw.plot(
+        p4 = plotw.plot(
             x=xcirc, y=ycirc, pen=None, symbol="o", symbolSize=rcirc, pxMode=False
         )
         lineplots.append(p4)
 
-        # points outside circles are marked with cross
-        p5 = pw.plot(
-            x=data[di][0],
-            y=data[di][1],
-            symbol="x",
-            symbolBrush="red",
-            symbolSize=10,
-            pen=None,
-        )
-        lineplots.append(p5)
-        pw.setAspectLocked()
+        # # points outside circles are marked with cross
+        # p5 = plotw.plot(
+        #     x=data[di][0],
+        #     y=data[di][1],
+        #     symbol="x",
+        #     symbolBrush="red",
+        #     symbolSize=10,
+        #     pen=None,
+        # )
+        # lineplots.append(p5)
+        plotw.setAspectLocked()
         grid = pg.GridItem()
         grid.setTickSpacing(x=[ballspacing], y=[ballspacing])
-        pw.addItem(grid)
+        plotw.addItem(grid)
 
-    return pw
+    return lineplots, plotw
 
 
 class Plot2dDock(Dock):
@@ -297,15 +302,17 @@ class Plot2dDock(Dock):
     knows how to draw and update itself based on the values in parameter tree
     """
 
-    def __init__(self, name):
+    def __init__(self, name, model_params):
         super(Plot2dDock, self).__init__(name)
 
         self.magnification = 5000
+        self.model_params = model_params
         self.artefacts = default_artefacts
 
         h_split = qtw.QSplitter(qtc.Horizontal)
         self.plot_params, self.tree = self.make_control_tree()
-        self.plot = self.make_plot()
+        self.lineplots, self.plot = plot_ballplate()
+        self.update_plot(self.model_params)
         h_split.addWidget(self.tree)
         h_split.addWidget(self.plot)
         self.addWidget(h_split)
@@ -314,8 +321,8 @@ class Plot2dDock(Dock):
         """
         returns the controls that go in the side bar of each 2d plot
         """
-        plot2d_params = Parameter.create(name="params", type="group")
-        plot2d_params.addChild(
+        plot_controls = Parameter.create(name="params", type="group")
+        plot_controls.addChild(
             dict(
                 type="list",
                 name="artefact",
@@ -323,22 +330,49 @@ class Plot2dDock(Dock):
                 limits=self.artefacts,
             )
         )
-        plot2d_params.addChild(grp_position)
-        plot2d_params.addChild(grp_plate_dirn)
+        plot_controls.addChild(grp_position)
+        plot_controls.addChild(grp_plate_dirn)
+
+        plot_controls.addChild(
+            dict(
+                type="slider",
+                name="slider_mag",
+                title="Magnification",
+                span=magnification_span,
+                value=5000,
+            )
+        )
+        plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
         plot2d_tree = ParameterTree(showHeader=False)
-        plot2d_tree.setParameters(plot2d_params, showTop=False)
-        return plot2d_params, plot2d_tree
+        plot2d_tree.setParameters(plot_controls, showTop=False)
+        return plot_controls, plot2d_tree
 
-    def make_plot(self):
+    def update_plot_controls(self, group, changes):
         """
-        plots the undeformed ballplate ready for update plot
+        event handler for a change in controls for this plot
         """
-        params0 = np.zeros(21)
-        plot2d = plot_ballplate(params0, self.magnification)
-        return plot2d
+        contorl_name = changes[0][0].name()
+        control_value = changes[0][2]
+        if contorl_name == "slider_mag":
+            self.magnification = control_value
+            self.update_plot(self.model_params)
 
-    def update_plot(self, model_params):
+    def update_plot(self, model_params: dict):
         """
         updates the 2d plot with new model parameters from MainWindow model sliders
         """
-        pass
+        RP = np.array(
+            [
+                [1.0, 0.0, 0.0, 100.0],
+                [0.0, 0.0, 1.0, 50.0],
+                [0.0, 1.0, 0.0, 50.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
+        xt, yt, zt = 0.0, 130.0, -243.4852
+        self.model_params = model_params
+        pars = list(model_params.values())
+        dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, pars)
+        data = single_grid_plot_data(dxy, self.magnification)
+        for datum, plot in zip(data, self.lineplots):
+            plot.setData(x=datum[0], y=datum[1])

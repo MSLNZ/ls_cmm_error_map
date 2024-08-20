@@ -2,7 +2,6 @@
 main gui for cmm error map app
 """
 
-import numpy as np
 from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import pyqtgraph.Qt.QtWidgets as qtw
@@ -25,6 +24,8 @@ class MainWindow(qtw.QMainWindow):
         self.model_params = design.model_parameters_dict.copy()
 
         self.slider_mag = 5000
+        # list of added 2d plots
+        self.plot2d_docks = []
         self.setup_gui()
         self.add_startup_docks()
         self.add_summary()
@@ -113,8 +114,6 @@ class MainWindow(qtw.QMainWindow):
         """
 
         plot3d_params = Parameter.create(name="params", type="group")
-        x = np.array([1, 2, 5, 7.5])
-        span = np.hstack((x, x * 10, x * 100, x * 1000, [10000]))
         plot_controls = plot3d_params.addChild(
             dict(type="group", name="plot_controls", title="Plot Controls")
         )
@@ -123,7 +122,7 @@ class MainWindow(qtw.QMainWindow):
                 type="slider",
                 name="slider_mag",
                 title="Magnification",
-                span=span,
+                span=gc.magnification_span,
                 value=5000,
             )
         )
@@ -187,6 +186,8 @@ class MainWindow(qtw.QMainWindow):
                         child.setValue(0.0)
 
         self.update_plot3d()
+        for dock in self.plot2d_docks:
+            dock.update_plot(self.model_params)
 
     def update_plot3d(self):
         # TODO define CMM size and display spacing (xt, yt, zt)
@@ -212,8 +213,9 @@ class MainWindow(qtw.QMainWindow):
         type of plot etc is set from side bar on dock
         can have lots of these
         """
-        new_plot_dock = gc.Plot2dDock("New Dock")
-        self.dock_area.addDock(new_plot_dock)
+        new_plot_dock = gc.Plot2dDock("New Dock", self.model_params)
+        self.dock_area.addDock(new_plot_dock, position="right")
+        self.plot2d_docks.append(new_plot_dock)
 
     def add_summary(self):
         text = "Summary\n"

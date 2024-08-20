@@ -35,6 +35,30 @@ model_parameters_dict = {
     "Wyz": 0.0,
 }
 
+# some non-zero parmeters for quick tests
+model_parameters_test = {
+    "Txx": 1.33e-05,
+    "Txy": 0.0,
+    "Txz": 0.0,
+    "Tyx": -1.12e-05,
+    "Tyy": -5.09e-06,
+    "Tyz": 0.0,
+    "Tzx": 2.6e-05,
+    "Tzy": 4.6e-06,
+    "Tzz": 3.34e-08,
+    "Rxx": 7.49e-09,
+    "Rxy": 1.54e-08,
+    "Rxz": 5e-09,
+    "Ryx": -4.58e-09,
+    "Ryy": -1.43e-08,
+    "Ryz": 2.19e-08,
+    "Rzx": 2.49e-09,
+    "Rzy": -7.94e-10,
+    "Rzz": 4.78e-08,
+    "Wxy": 0.0,
+    "Wxz": 0.0,
+    "Wyz": 0.0,
+}
 
 ballspacing = 133.0
 posinfo = [
