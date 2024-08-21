@@ -175,13 +175,36 @@ grp_plate_dirn = {
     ],
 }
 
+# TODO expand this structure to incldude artefact parameters
+default_artefacts = {"MSL Ballplate A": 0}
+
+plot2d_control_grp = {
+    "title": "Plot 0",
+    "name": "plot",
+    "type": "group",
+    "expanded": False,
+    "children": [
+        {
+            "name": "plot_title",
+            "title": "Plot Title",
+            "type": "str",
+            "value": "Plot 0",
+        },
+        {
+            "name": "artefact",
+            "title": "artefact type",
+            "type": "list",
+            "limits": default_artefacts,
+        },
+        grp_position,
+        grp_plate_dirn,
+    ],
+}
+
 # TODO these need to be parameters in gui or config
 ballspacing = 133.0
 
 U95 = 1.2
-
-# TODO expand this structure to incldude artefact parameters
-default_artefacts = {"MSL Ballplate A": 0}
 
 
 def single_grid_plot_data(dxy, mag, lines=True, circles=True):
@@ -307,10 +330,9 @@ class Plot2dDock(Dock):
 
         self.magnification = 5000
         self.model_params = model_params
-        self.artefacts = default_artefacts
 
         h_split = qtw.QSplitter(qtc.Horizontal)
-        self.plot_params, self.tree = self.make_control_tree()
+        self.plot_controls, self.tree = self.make_control_tree()
         self.lineplots, self.plot = plot_ballplate()
         self.update_plot(self.model_params)
         h_split.addWidget(self.tree)
@@ -321,18 +343,13 @@ class Plot2dDock(Dock):
         """
         returns the controls that go in the side bar of each 2d plot
         """
-        plot_controls = Parameter.create(name="params", type="group")
-        plot_controls.addChild(
-            dict(
-                type="list",
-                name="artefact",
-                title="artefact type",
-                limits=self.artefacts,
-            )
+        plot_controls = Parameter.create(
+            name="params", title="New Dock", type="group", addText="Add Plot"
         )
-        plot_controls.addChild(grp_position)
-        plot_controls.addChild(grp_plate_dirn)
-
+        dock_title = plot_controls.addChild(
+            dict(type="str", name="dock_title", title="Dock Title", value="New Dock")
+        )
+        dock_title.sigValueChanged.connect(self.change_dock_title)
         plot_controls.addChild(
             dict(
                 type="slider",
@@ -342,14 +359,42 @@ class Plot2dDock(Dock):
                 value=5000,
             )
         )
+        self.add_new_plot_grp(plot_controls)
+
         plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
+        plot_controls.sigAddNew.connect(self.add_new_plot_grp)
+
         plot2d_tree = ParameterTree(showHeader=False)
-        plot2d_tree.setParameters(plot_controls, showTop=False)
+        plot2d_tree.setParameters(plot_controls, showTop=True)
         return plot_controls, plot2d_tree
+
+    def add_new_plot_grp(self, parent):
+        """
+        add the controls for a new plot to the side bar
+        """
+        new_title = f"Plot {len(parent.childs)}"
+        grp_params = plot2d_control_grp.copy()
+        grp_params["title"] = new_title
+        grp_params["children"][0]["value"] = new_title
+        new_grp = parent.addChild(grp_params, autoIncrementName=True)
+        new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
+
+    def change_plot_title(self, param):
+        """
+        event handler for a change in plot title
+        """
+        param.parent().setOpts(title=param.value())
+
+    def change_dock_title(self, param):
+        """
+        event handler for a change in dock title
+        """
+        param.parent().setOpts(title=param.value())
+        self.setTitle(param.value())
 
     def update_plot_controls(self, group, changes):
         """
-        event handler for a change in controls for this plot
+        event handler for a change in controls for this dock
         """
         contorl_name = changes[0][0].name()
         control_value = changes[0][2]

@@ -38,7 +38,7 @@ class MainWindow(qtw.QMainWindow):
         self.control_group.addChild(self.slider_group)
         # other controls
         btn_plot = self.control_group.addChild(
-            dict(type="action", name="btn_plot", title="Add Plot")
+            dict(type="action", name="btn_plot", title="Add Plot Dock")
         )
         btn_plot.sigActivated.connect(self.add_new_plot2d_dock)
 
