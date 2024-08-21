@@ -175,8 +175,54 @@ grp_plate_dirn = {
     ],
 }
 
+grp_probe_lengths = {
+    "title": "Probe Lengths",
+    "name": "grp_probe_lengths",
+    "type": "group",
+    "expanded": False,
+    "children": [
+        {"name": "X", "type": "float", "value": 0.0},
+        {"name": "Y", "type": "float", "value": 0.0},
+        {"name": "Z", "type": "float", "value": 0.0},
+    ],
+}
+
 # TODO expand this structure to incldude artefact parameters
 default_artefacts = {"MSL Ballplate A": 0}
+
+dock_control_grp = {
+    "name": "dock_control_grp",
+    "title": "New Dock",
+    "type": "group",
+    "children": [
+        {
+            "type": "str",
+            "name": "dock_title",
+            "title": "Dock Title",
+            "value": "New Dock",
+        },
+        {
+            "name": "artefact",
+            "title": "artefact type",
+            "type": "list",
+            "limits": default_artefacts,
+        },
+        {
+            "type": "slider",
+            "name": "slider_mag",
+            "title": "Magnification",
+            "span": magnification_span,
+            "value": 5000,
+        },
+        {
+            "name": "plots_grp",
+            "title": "Plots",
+            "type": "group",
+            "addText": "Add Plot",
+            "children": [],
+        },
+    ],
+}
 
 plot2d_control_grp = {
     "title": "Plot 0",
@@ -190,14 +236,9 @@ plot2d_control_grp = {
             "type": "str",
             "value": "Plot 0",
         },
-        {
-            "name": "artefact",
-            "title": "artefact type",
-            "type": "list",
-            "limits": default_artefacts,
-        },
         grp_position,
         grp_plate_dirn,
+        grp_probe_lengths,
     ],
 }
 
@@ -343,26 +384,15 @@ class Plot2dDock(Dock):
         """
         returns the controls that go in the side bar of each 2d plot
         """
-        plot_controls = Parameter.create(
-            name="params", title="New Dock", type="group", addText="Add Plot"
-        )
-        dock_title = plot_controls.addChild(
-            dict(type="str", name="dock_title", title="Dock Title", value="New Dock")
-        )
+        plot_controls = Parameter.create(**dock_control_grp)
+        dock_title = plot_controls.child("dock_title")
         dock_title.sigValueChanged.connect(self.change_dock_title)
-        plot_controls.addChild(
-            dict(
-                type="slider",
-                name="slider_mag",
-                title="Magnification",
-                span=magnification_span,
-                value=5000,
-            )
-        )
-        self.add_new_plot_grp(plot_controls)
+
+        plots_grp = plot_controls.child("plots_grp")
+        self.add_new_plot_grp(plots_grp)
+        plots_grp.sigAddNew.connect(self.add_new_plot_grp)
 
         plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
-        plot_controls.sigAddNew.connect(self.add_new_plot_grp)
 
         plot2d_tree = ParameterTree(showHeader=False)
         plot2d_tree.setParameters(plot_controls, showTop=True)
@@ -396,9 +426,9 @@ class Plot2dDock(Dock):
         """
         event handler for a change in controls for this dock
         """
-        contorl_name = changes[0][0].name()
+        control_name = changes[0][0].name()
         control_value = changes[0][2]
-        if contorl_name == "slider_mag":
+        if control_name == "slider_mag":
             self.magnification = control_value
             self.update_plot(self.model_params)
 
