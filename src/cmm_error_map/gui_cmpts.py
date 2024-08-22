@@ -285,25 +285,26 @@ def single_grid_plot_data(dxy, mag, lines=True, circles=True):
     return data
 
 
-def plot_ballplate(lines=True, circles=True):
+def plot_ballplate(RP, xt, yt, zt, lines=True, circles=True):
     """
     pyqtgraph 2d pot of ballplate errors
     takes a set of model parameters and produces a 2D magniifed plot of errors in ballplate mmt
     """
-    # XZ plane
+
+    params = [0.0] * 21
+    # plate transforamtion and position are arbitary here with params all zero
+    # XY plane
     RP = np.array(
         [
             [1.0, 0.0, 0.0, 100.0],
-            [0.0, 0.0, 1.0, 50.0],
-            [0.0, 1.0, 0.0, 50.0],
+            [0.0, 1.0, 0.0, 100.0],
+            [0.0, 1.0, 1.0, 50.0],
             [0.0, 0.0, 0.0, 1.0],
         ]
     )
-
+    xt, yt, zt = 0.0, 130.0, -243.4852
     lineplots = []
     plotw = pg.PlotWidget(name="XZ")
-    xt, yt, zt = 0.0, 130.0, -243.4852
-    params = [0.0] * 21
     mag = 1
     dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, params)
     data = single_grid_plot_data(dxy, mag)
@@ -435,7 +436,19 @@ class Plot2dDock(Dock):
     def update_plot(self, model_params: dict):
         """
         updates the 2d plot with new model parameters from MainWindow model sliders
+
+        RP = [[x5,x20,xn,x0],
+           [y5,y20,yn,y0],
+           [z5,z20,zn,z0],
+           [0,0,0, 1]]
+
+        where (x5,y5,z5) is the direction of the vector from ball 1 to ball 5 (plate X axis)
+            (x20,y20,z20) is the direction of the vector from ball 1 to ball 20 (plate Y axis)
+            (xn,yn,zn) is the direction perpendicular to the plate (plate Z axis)
+            (x0,y0,z0) is the machine position of ball 1
         """
+        # calculate plate transforamtion matrix from GUI values
+
         RP = np.array(
             [
                 [1.0, 0.0, 0.0, 100.0],

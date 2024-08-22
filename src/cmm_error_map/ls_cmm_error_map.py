@@ -214,7 +214,7 @@ class MainWindow(qtw.QMainWindow):
         can have lots of these
         """
         new_plot_dock = gc.Plot2dDock("New Dock", self.model_params)
-        self.dock_area.addDock(new_plot_dock, position="right")
+        self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
 
     def add_summary(self):
