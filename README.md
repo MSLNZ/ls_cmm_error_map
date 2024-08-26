@@ -13,3 +13,8 @@ This will help with using the ball-plate and gauge blocks to assess the CMM unce
 - 2024-08-12 - basic 3d deformation plot with sliders working
 - 2024-08-13 - further gui work, move plot parameters to each plot dock etc.
 - 2024-08-14 - basic pyqtgraph plot of ballplate error working `plot_ballplate.py` - needs styling
+- 2024-08-19 - moving ballplate  plot to main app
+- 2024-08-20 - ballplate plot responding to model sliders
+- 2024-08-21 - class `Plot2Dock`
+- 2024-08-22 - choice of matrix transform library - choose mathutils from Blender as well maintained
+- 2024-08-26
