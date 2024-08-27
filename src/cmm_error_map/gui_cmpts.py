@@ -11,8 +11,6 @@ import cmm_error_map.design_matrix_linear_fixed as design
 from dataclasses import dataclass, field
 
 import mathutils as mu
-import cmm_error_map.geometry3d as g3d
-
 
 slider_factors = {
     "Txx": 1e-6,
@@ -158,24 +156,9 @@ grp_plate_dirn = {
     "type": "group",
     "expanded": False,
     "children": [
-        {
-            "name": "x-axis",
-            "type": "group",
-            "children": [
-                {"name": "i", "type": "float", "value": 1.0},
-                {"name": "j", "type": "float", "value": 0.0},
-                {"name": "k", "type": "float", "value": 0.0},
-            ],
-        },
-        {
-            "name": "z-axis",
-            "type": "group",
-            "children": [
-                {"name": "i", "type": "float", "value": 0.0},
-                {"name": "j", "type": "float", "value": 0.0},
-                {"name": "k", "type": "float", "value": 1.0},
-            ],
-        },
+        {"name": "X", "type": "float", "value": 0.0, "suffix": "°"},
+        {"name": "Y", "type": "float", "value": 0.0, "suffix": "°"},
+        {"name": "Z", "type": "float", "value": 0.0, "suffix": "°"},
     ],
 }
 
@@ -390,40 +373,40 @@ class Plot2dDock(Dock):
         self.magnification = 5000
         self.model_params = model_params
 
-        h_split = qtw.QSplitter(qtc.Horizontal)
-        self.plot_controls, self.tree = self.make_control_tree()
         self.plot_data = {}
-        self.plot_data_from_controls()
-
         self.plot_widget = pg.PlotWidget(name=name)
+        self.add_control_tree()
+
+        self.plot_data_from_controls()
 
         for plot in self.plot_data.values():
             plot.lineplots = plot_ballplate(self.plot_widget)
 
         self.update_plot(self.model_params)
+
+        h_split = qtw.QSplitter(qtc.Horizontal)
         h_split.addWidget(self.tree)
         h_split.addWidget(self.plot_widget)
         self.addWidget(h_split)
 
-    def make_control_tree(self):
+    def add_control_tree(self):
         """
         returns the controls that go in the side bar of each 2d plot
         """
-        plot_controls = Parameter.create(**dock_control_grp)
-        dock_title = plot_controls.child("dock_title")
+        self.plot_controls = Parameter.create(**dock_control_grp)
+        dock_title = self.plot_controls.child("dock_title")
         dock_title.sigValueChanged.connect(self.change_dock_title)
 
-        plots_grp = plot_controls.child("plots_grp")
+        plots_grp = self.plot_controls.child("plots_grp")
         self.add_new_plot_grp(plots_grp)
         plots_grp.sigAddNew.connect(self.add_new_plot_grp)
 
-        # plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
-        slider_mag = plot_controls.child("slider_mag")
+        plots_grp.sigTreeStateChanged.connect(self.update_plot(self.model_params))
+        slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
 
-        plot2d_tree = ParameterTree(showHeader=False)
-        plot2d_tree.setParameters(plot_controls, showTop=True)
-        return plot_controls, plot2d_tree
+        self.tree = ParameterTree(showHeader=False)
+        self.tree.setParameters(self.plot_controls, showTop=True)
 
     def add_new_plot_grp(self, parent):
         """
@@ -466,16 +449,6 @@ class Plot2dDock(Dock):
     def update_plot(self, model_params: dict):
         """
         updates the 2d plot with new model parameters from MainWindow model sliders
-
-        RP = [[x5,x20,xn,x0],
-           [y5,y20,yn,y0],
-           [z5,z20,zn,z0],
-           [0,0,0, 1]]
-
-        where (x5,y5,z5) is the direction of the vector from ball 1 to ball 5 (plate X axis)
-            (x20,y20,z20) is the direction of the vector from ball 1 to ball 20 (plate Y axis)
-            (xn,yn,zn) is the direction perpendicular to the plate (plate Z axis)
-            (x0,y0,z0) is the machine position of ball 1
         """
         self.model_params = model_params
         self.plot_data_from_controls()
@@ -498,26 +471,28 @@ class Plot2dDock(Dock):
             name = plot_child.name()
             title = plot_child.title()
             # if an entry doesn't exist create a default one
-            self.plot_data[name] = self.plot_data.get(name, PlotData)
+            if name not in self.plot_data:
+                self.plot_data[name] = PlotData()
+                self.plot_data[name].lineplots = plot_ballplate(self.plot_widget)
             self.plot_data[name].title = title
 
-            xaxis = plot_child.child("grp_plate_dirn", "x-axis")
-            zaxis = plot_child.child("grp_plate_dirn", "z-axis")
+            euler_deg = plot_child.child("grp_plate_dirn")
             origin = plot_child.child("grp_position")
             probe = plot_child.child("grp_probe_lengths")
 
-            self.plot_data[name].transform_mat = g3d.matrix_xz_vector(
-                child_to_vector(origin),
-                child_to_vector(xaxis),
-                child_to_vector(zaxis),
-            )
+            eul = mu.Euler(child_to_vector(euler_deg, mfactor=np.deg2rad(1)))
+            mat_rot = eul.to_matrix()
+            mat_loc = mu.Matrix.Translation(child_to_vector(origin))
+
+            self.plot_data[name].transform_mat = mat_loc @ mat_rot.to_4x4()
             self.plot_data[name].probe_vec = child_to_vector(probe)
-            # print(f"{self.plot_data[name].transform_mat =}")
 
 
-def child_to_vector(child: Parameter) -> mu.Vector:
+def child_to_vector(child: Parameter, mfactor=1.0) -> mu.Vector:
     """
     return the values of child as a mathutils vector
+    mfactor can be used to convert from degrees to radians
+    mfactor = np.deg2rad(1)
     """
-    v = [grand_kid.value() for grand_kid in child.children()]
+    v = [mfactor * grand_kid.value() for grand_kid in child.children()]
     return mu.Vector(v)

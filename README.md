@@ -17,4 +17,5 @@ This will help with using the ball-plate and gauge blocks to assess the CMM unce
 - 2024-08-20 - ballplate plot responding to model sliders
 - 2024-08-21 - class `Plot2Dock`
 - 2024-08-22 - choice of matrix transform library - choose mathutils from Blender as well maintained
-- 2024-08-26
+- 2024-08-26 - working on multiple aretefact plots per axis
+- 2024-08-27 - position and orientaion of artefact connected
