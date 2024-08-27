@@ -79,6 +79,7 @@ dependencies = [
     { name = "ipykernel" },
     { name = "ipympl" },
     { name = "ipython" },
+    { name = "mathutils" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
@@ -95,6 +96,7 @@ requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "ipympl", specifier = ">=0.9.4" },
     { name = "ipython", specifier = ">=8.26.0" },
+    { name = "mathutils" },
     { name = "matplotlib", specifier = ">=3.9.1" },
     { name = "numpy", specifier = "==1.26.3" },
     { name = "pandas", specifier = ">=2.2.2" },
@@ -412,6 +414,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/60/4f0fd50b08f5be536ea0cef518ac7255d9dab43ca40f3b93b60e3ddf80dd/kiwisolver-1.4.5-cp312-cp312-win32.whl", hash = "sha256:72d40b33e834371fd330fb1472ca19d9b8327acb79a5821d4008391db8e29f20", size = 46473 },
     { url = "https://files.pythonhosted.org/packages/63/50/2746566bdf4a6a842d117367d05c90cfb87ac04e9e2845aa1fa21f071362/kiwisolver-1.4.5-cp312-cp312-win_amd64.whl", hash = "sha256:2c5674c4e74d939b9d91dda0fae10597ac7521768fec9e399c70a1f27e2ea2d9", size = 56004 },
 ]
+
+[[package]]
+name = "mathutils"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/9d/e9b156c0e28b1a3fd970930bfd8b33f6cc5ae0863405ac46557225545b76/mathutils-3.3.0.tar.gz", hash = "sha256:b9371af8149f3f3f05ee165cb583b2df7b3fbc9935406d1c505a5276b8e563af", size = 245352 }
 
 [[package]]
 name = "matplotlib"

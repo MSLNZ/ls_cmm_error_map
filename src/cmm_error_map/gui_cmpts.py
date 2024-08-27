@@ -8,6 +8,10 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import cmm_error_map.design_matrix_linear_fixed as design
+from dataclasses import dataclass, field
+
+import mathutils as mu
+import cmm_error_map.geometry3d as g3d
 
 
 slider_factors = {
@@ -242,10 +246,20 @@ plot2d_control_grp = {
     ],
 }
 
+
 # TODO these need to be parameters in gui or config
 ballspacing = 133.0
 
 U95 = 1.2
+
+
+@dataclass
+class PlotData:
+    title: str = "Plot 0"
+    transform_mat: mu.Matrix = mu.Matrix()
+    probe_vec: mu.Vector = mu.Vector()
+    plot: pg.PlotWidget = None
+    lineplots: list = field(default_factory=list[pg.PlotDataItem])
 
 
 def single_grid_plot_data(dxy, mag, lines=True, circles=True):
@@ -285,7 +299,11 @@ def single_grid_plot_data(dxy, mag, lines=True, circles=True):
     return data
 
 
-def plot_ballplate(RP, xt, yt, zt, lines=True, circles=True):
+def plot_ballplate(
+    plotw: pg.PlotWidget,
+    lines=True,
+    circles=True,
+) -> list[pg.PlotDataItem]:
     """
     pyqtgraph 2d pot of ballplate errors
     takes a set of model parameters and produces a 2D magniifed plot of errors in ballplate mmt
@@ -293,18 +311,17 @@ def plot_ballplate(RP, xt, yt, zt, lines=True, circles=True):
 
     params = [0.0] * 21
     # plate transforamtion and position are arbitary here with params all zero
-    # XY plane
     RP = np.array(
         [
             [1.0, 0.0, 0.0, 100.0],
             [0.0, 1.0, 0.0, 100.0],
-            [0.0, 1.0, 1.0, 50.0],
+            [0.0, 0.0, 1.0, 100.0],
             [0.0, 0.0, 0.0, 1.0],
         ]
     )
-    xt, yt, zt = 0.0, 130.0, -243.4852
+    xt, yt, zt = 0.0, 0.0, -100.0
     lineplots = []
-    plotw = pg.PlotWidget(name="XZ")
+
     mag = 1
     dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, params)
     data = single_grid_plot_data(dxy, mag)
@@ -358,7 +375,7 @@ def plot_ballplate(RP, xt, yt, zt, lines=True, circles=True):
         grid.setTickSpacing(x=[ballspacing], y=[ballspacing])
         plotw.addItem(grid)
 
-    return lineplots, plotw
+    return lineplots
 
 
 class Plot2dDock(Dock):
@@ -375,10 +392,17 @@ class Plot2dDock(Dock):
 
         h_split = qtw.QSplitter(qtc.Horizontal)
         self.plot_controls, self.tree = self.make_control_tree()
-        self.lineplots, self.plot = plot_ballplate()
+        self.plot_data = {}
+        self.plot_data_from_controls()
+
+        self.plot_widget = pg.PlotWidget(name=name)
+
+        for plot in self.plot_data.values():
+            plot.lineplots = plot_ballplate(self.plot_widget)
+
         self.update_plot(self.model_params)
         h_split.addWidget(self.tree)
-        h_split.addWidget(self.plot)
+        h_split.addWidget(self.plot_widget)
         self.addWidget(h_split)
 
     def make_control_tree(self):
@@ -393,7 +417,9 @@ class Plot2dDock(Dock):
         self.add_new_plot_grp(plots_grp)
         plots_grp.sigAddNew.connect(self.add_new_plot_grp)
 
-        plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
+        # plot_controls.sigTreeStateChanged.connect(self.update_plot_controls)
+        slider_mag = plot_controls.child("slider_mag")
+        slider_mag.sigValueChanged.connect(self.change_magnification)
 
         plot2d_tree = ParameterTree(showHeader=False)
         plot2d_tree.setParameters(plot_controls, showTop=True)
@@ -433,6 +459,10 @@ class Plot2dDock(Dock):
             self.magnification = control_value
             self.update_plot(self.model_params)
 
+    def change_magnification(self, control):
+        self.magnification = control.value()
+        self.update_plot(self.model_params)
+
     def update_plot(self, model_params: dict):
         """
         updates the 2d plot with new model parameters from MainWindow model sliders
@@ -447,20 +477,47 @@ class Plot2dDock(Dock):
             (xn,yn,zn) is the direction perpendicular to the plate (plate Z axis)
             (x0,y0,z0) is the machine position of ball 1
         """
-        # calculate plate transforamtion matrix from GUI values
-
-        RP = np.array(
-            [
-                [1.0, 0.0, 0.0, 100.0],
-                [0.0, 0.0, 1.0, 50.0],
-                [0.0, 1.0, 0.0, 50.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        )
-        xt, yt, zt = 0.0, 130.0, -243.4852
         self.model_params = model_params
+        self.plot_data_from_controls()
         pars = list(model_params.values())
-        dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, pars)
-        data = single_grid_plot_data(dxy, self.magnification)
-        for datum, plot in zip(data, self.lineplots):
-            plot.setData(x=datum[0], y=datum[1])
+        for plot in self.plot_data.values():
+            # convert to parameters required by modelled_mmts_XYZ
+            # TODO convert design module to mathutils
+            RP = np.array(plot.transform_mat)
+            xt, yt, zt = plot.probe_vec
+            dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, pars)
+            data = single_grid_plot_data(dxy, self.magnification)
+            for datum, plot in zip(data, plot.lineplots):
+                plot.setData(x=datum[0], y=datum[1])
+
+    def plot_data_from_controls(self):
+        """
+        create the self.plot_data dict of PlotData classes from current gui settings
+        """
+        for plot_child in self.plot_controls.child("plots_grp").children():
+            name = plot_child.name()
+            title = plot_child.title()
+            # if an entry doesn't exist create a default one
+            self.plot_data[name] = self.plot_data.get(name, PlotData)
+            self.plot_data[name].title = title
+
+            xaxis = plot_child.child("grp_plate_dirn", "x-axis")
+            zaxis = plot_child.child("grp_plate_dirn", "z-axis")
+            origin = plot_child.child("grp_position")
+            probe = plot_child.child("grp_probe_lengths")
+
+            self.plot_data[name].transform_mat = g3d.matrix_xz_vector(
+                child_to_vector(origin),
+                child_to_vector(xaxis),
+                child_to_vector(zaxis),
+            )
+            self.plot_data[name].probe_vec = child_to_vector(probe)
+            # print(f"{self.plot_data[name].transform_mat =}")
+
+
+def child_to_vector(child: Parameter) -> mu.Vector:
+    """
+    return the values of child as a mathutils vector
+    """
+    v = [grand_kid.value() for grand_kid in child.children()]
+    return mu.Vector(v)
