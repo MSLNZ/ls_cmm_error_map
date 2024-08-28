@@ -3,17 +3,14 @@ main gui for cmm error map app
 0oOilL1I| 0123456789
 """
 
-from pyqtgraph.Qt.QtCore import Qt as qtc
-
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
 import pyqtgraph.Qt.QtWidgets as qtw
-from pyqtgraph.parametertree import Parameter, ParameterTree
+import qdarktheme
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
-import pyqtgraph as pg
-
-import pyqtgraph.opengl as gl
-
-import qdarktheme
+from pyqtgraph.parametertree import Parameter, ParameterTree
+from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.gui_cmpts as gc

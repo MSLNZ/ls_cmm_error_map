@@ -1,16 +1,15 @@
-import numpy as np
-
-import pyqtgraph as pg
-from pyqtgraph.Qt.QtCore import Qt as qtc
-import pyqtgraph.Qt.QtWidgets as qtw
-import pyqtgraph.opengl as gl
-from pyqtgraph.dockarea.Dock import Dock
-from pyqtgraph.parametertree import Parameter, ParameterTree
-
-import cmm_error_map.design_matrix_linear_fixed as design
 from dataclasses import dataclass, field
 
 import mathutils as mu
+import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
+import pyqtgraph.Qt.QtWidgets as qtw
+from pyqtgraph.dockarea.Dock import Dock
+from pyqtgraph.parametertree import Parameter, ParameterTree
+from pyqtgraph.Qt.QtCore import Qt as qtc
+
+import cmm_error_map.design_matrix_linear_fixed as design
 
 slider_factors = {
     "Txx": 1e-6,
@@ -150,9 +149,9 @@ grp_position = {
         {"name": "Z", "type": "float", "value": 0.0},
     ],
 }
-grp_plate_dirn = {
-    "title": "Plate Orientation",
-    "name": "grp_plate_dirn",
+grp_rotation = {
+    "title": "Rotation",
+    "name": "grp_rotation",
     "type": "group",
     "expanded": False,
     "children": [
@@ -174,8 +173,11 @@ grp_probe_lengths = {
     ],
 }
 
-# TODO expand this structure to incldude artefact parameters
-default_artefacts = {"MSL Ballplate A": 0}
+default_artefacts = {
+    "KOBA 0620": {"ball_spacing": 133, "nballs": (5, 5)},
+    "KOBA 0420": {"ball_spacing": 83, "nballs": (5, 5)},
+    "KOBA 0320": {"ball_spacing": 60, "nballs": (5, 5)},
+}
 
 dock_control_grp = {
     "name": "dock_control_grp",
@@ -224,7 +226,7 @@ plot2d_control_grp = {
             "value": "Plot 0",
         },
         grp_position,
-        grp_plate_dirn,
+        grp_rotation,
         grp_probe_lengths,
     ],
 }
@@ -284,6 +286,8 @@ def single_grid_plot_data(dxy, mag, lines=True, circles=True):
 
 def plot_ballplate(
     plotw: pg.PlotWidget,
+    ballspacing=133.0,
+    nballs=(5, 5),
     lines=True,
     circles=True,
 ) -> list[pg.PlotDataItem]:
@@ -306,7 +310,9 @@ def plot_ballplate(
     lineplots = []
 
     mag = 1
-    dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, params)
+    dxy = design.modelled_mmts_XYZ(
+        RP, xt, yt, zt, params, ballspacing=ballspacing, nballs=nballs
+    )
     data = single_grid_plot_data(dxy, mag)
     di = 0
     p1 = plotw.plot(
@@ -378,9 +384,14 @@ class Plot2dDock(Dock):
         self.add_control_tree()
 
         self.plot_data_from_controls()
+        self.artefact = default_artefacts["KOBA 0620"]
 
         for plot in self.plot_data.values():
-            plot.lineplots = plot_ballplate(self.plot_widget)
+            plot.lineplots = plot_ballplate(
+                self.plot_widget,
+                ballspacing=self.artefact["ball_spacing"],
+                nballs=self.artefact["nballs"],
+            )
 
         self.update_plot(self.model_params)
 
@@ -401,9 +412,14 @@ class Plot2dDock(Dock):
         self.add_new_plot_grp(plots_grp)
         plots_grp.sigAddNew.connect(self.add_new_plot_grp)
 
-        plots_grp.sigTreeStateChanged.connect(self.update_plot(self.model_params))
+        plots_grp.sigTreeStateChanged.connect(
+            lambda: self.update_plot(self.model_params)
+        )
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
+
+        artefact = self.plot_controls.child("artefact")
+        artefact.sigValueChanged.connect(self.change_artefact)
 
         self.tree = ParameterTree(showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
@@ -419,6 +435,13 @@ class Plot2dDock(Dock):
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
 
+    def change_artefact(self, param):
+        """
+        event handler for a change in artefact
+        """
+        self.artefact = param.value()
+        self.update_plot(self.model_params)
+
     def change_plot_title(self, param):
         """
         event handler for a change in plot title
@@ -432,17 +455,10 @@ class Plot2dDock(Dock):
         param.parent().setOpts(title=param.value())
         self.setTitle(param.value())
 
-    def update_plot_controls(self, group, changes):
-        """
-        event handler for a change in controls for this dock
-        """
-        control_name = changes[0][0].name()
-        control_value = changes[0][2]
-        if control_name == "slider_mag":
-            self.magnification = control_value
-            self.update_plot(self.model_params)
-
     def change_magnification(self, control):
+        """
+        event handler for a change in magnification
+        """
         self.magnification = control.value()
         self.update_plot(self.model_params)
 
@@ -458,7 +474,15 @@ class Plot2dDock(Dock):
             # TODO convert design module to mathutils
             RP = np.array(plot.transform_mat)
             xt, yt, zt = plot.probe_vec
-            dxy = design.modelled_mmts_XYZ(RP, xt, yt, zt, pars)
+            dxy = design.modelled_mmts_XYZ(
+                RP,
+                xt,
+                yt,
+                zt,
+                pars,
+                ballspacing=self.artefact["ball_spacing"],
+                nballs=self.artefact["nballs"],
+            )
             data = single_grid_plot_data(dxy, self.magnification)
             for datum, plot in zip(data, plot.lineplots):
                 plot.setData(x=datum[0], y=datum[1])
@@ -476,7 +500,7 @@ class Plot2dDock(Dock):
                 self.plot_data[name].lineplots = plot_ballplate(self.plot_widget)
             self.plot_data[name].title = title
 
-            euler_deg = plot_child.child("grp_plate_dirn")
+            euler_deg = plot_child.child("grp_rotation")
             origin = plot_child.child("grp_position")
             probe = plot_child.child("grp_probe_lengths")
 

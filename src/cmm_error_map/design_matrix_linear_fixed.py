@@ -212,7 +212,7 @@ def modelled_mmts(mmtinfo, params):
     return y
 
 
-def modelled_mmts_XYZ(RP, xt, yt, zt, params):
+def modelled_mmts_XYZ(RP, xt, yt, zt, params, ballspacing=133.0, nballs=(5, 5)):
     """
      for a plate transformation matrix RP,
      a probe xt,yt,zt and a set of 21 parameters, produces an expected set of
@@ -229,16 +229,17 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params):
           (x0,y0,z0) is the machine position of ball 1
 
     """
-    ballnumber = np.arange(25)
+    ball_count = nballs[0] * nballs[1]
+    ballnumber = np.arange(ball_count)
 
-    xp = (ballnumber % 5) * ballspacing
-    yp = (ballnumber // 5) * ballspacing
+    xp = (ballnumber % nballs[0]) * ballspacing
+    yp = (ballnumber // nballs[1]) * ballspacing
     zp = ballnumber * 0.0
 
-    XP = np.vstack((xp, yp, zp, np.ones(25)))
+    XP = np.vstack((xp, yp, zp, np.ones(ball_count)))
     # transfer to machine CSY
     XM = np.dot(RP, XP)
-    eXYZ = np.zeros((4, 25))
+    eXYZ = np.zeros((4, ball_count))
     for b in ballnumber:
         eXYZ[:3, b] = model_linear(XM[0, b], XM[1, b], XM[2, b], params, xt, yt, zt)
 
@@ -250,7 +251,7 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params):
     # subtract ball 1 row from each position
     XYZp[:3, :] = XYZp[:3, :] - XYZp[:3, 0:1]
     # also rotate about plate z so y=0 for ball 5
-    ang = -1.0 * np.arctan2(XYZp[1, 4], XYZp[0, 4])
+    ang = -1.0 * np.arctan2(XYZp[1, nballs[0] - 1], XYZp[0, nballs[1] - 1])
     cang = np.cos(ang)
     sang = np.sin(ang)
     RZ = np.array(
