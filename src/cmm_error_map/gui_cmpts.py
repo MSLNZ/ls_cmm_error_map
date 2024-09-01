@@ -42,7 +42,7 @@ magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 # MARK: 3D plots
 
 
-def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list:
+def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list[pg.PlotDataItem]:
     """
     produces a 3D magniifed plot of the undeformed machine ready for updating with
     deformation via update_plot_model3d
@@ -101,7 +101,9 @@ def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list:
     return plot_lines
 
 
-def update_plot_model3d(plot_lines: list, params: dict, xt, yt, zt, mag):
+def update_plot_model3d(
+    plot_lines: list[pg.PlotDataItem], params: dict, xt, yt, zt, mag
+):
     """
     update a plot produced by plot_model3d with a new set of params
     """
@@ -247,7 +249,14 @@ class PlotData:
     lineplots: list = field(default_factory=list[pg.PlotDataItem])
 
 
-def single_grid_plot_data(dxy, mag, lines=True, circles=True):
+def single_grid_plot_data(
+    dxy,
+    mag,
+    ballspacing=133.0,
+    nballs=(5, 5),
+    lines=True,
+    circles=True,
+):
     """
     drawing red crosses on out of tolerance point commented out
     until I figure how to update them (number of red crosses can change)
@@ -255,8 +264,8 @@ def single_grid_plot_data(dxy, mag, lines=True, circles=True):
     in order of ballnumber
     """
     ballnumber = np.arange(dxy.shape[0])
-    xplaten = (ballnumber) % 5
-    yplaten = (ballnumber) // 5
+    xplaten = (ballnumber) % nballs[0]
+    yplaten = (ballnumber) // nballs[1]
 
     xplot = mag * dxy[:, 0] + xplaten * ballspacing
     yplot = mag * dxy[:, 1] + yplaten * ballspacing
@@ -386,13 +395,6 @@ class Plot2dDock(Dock):
         self.plot_data_from_controls()
         self.artefact = default_artefacts["KOBA 0620"]
 
-        for plot in self.plot_data.values():
-            plot.lineplots = plot_ballplate(
-                self.plot_widget,
-                ballspacing=self.artefact["ball_spacing"],
-                nballs=self.artefact["nballs"],
-            )
-
         self.update_plot(self.model_params)
 
         h_split = qtw.QSplitter(qtc.Horizontal)
@@ -440,6 +442,7 @@ class Plot2dDock(Dock):
         event handler for a change in artefact
         """
         self.artefact = param.value()
+        print(f"{self.artefact=}")
         self.update_plot(self.model_params)
 
     def change_plot_title(self, param):
@@ -483,7 +486,12 @@ class Plot2dDock(Dock):
                 ballspacing=self.artefact["ball_spacing"],
                 nballs=self.artefact["nballs"],
             )
-            data = single_grid_plot_data(dxy, self.magnification)
+            data = single_grid_plot_data(
+                dxy,
+                self.magnification,
+                ballspacing=self.artefact["ball_spacing"],
+                nballs=self.artefact["nballs"],
+            )
             for datum, plot in zip(data, plot.lineplots):
                 plot.setData(x=datum[0], y=datum[1])
 
