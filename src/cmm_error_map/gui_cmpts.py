@@ -149,6 +149,47 @@ dock3d_control_grp = {
             "span": magnification_span,
             "value": 5000,
         },
+        {
+            "name": "probes_grp",
+            "title": "Probes",
+            "type": "group",
+            "addText": "Add Probe",
+            "children": [],
+        },
+    ],
+}
+
+grp_probe_lengths = {
+    "title": "Probe Lengths",
+    "name": "grp_probe_lengths",
+    "type": "group",
+    "expanded": False,
+    "children": [
+        {"name": "X", "type": "float", "value": 0.0},
+        {"name": "Y", "type": "float", "value": 0.0},
+        {"name": "Z", "type": "float", "value": 0.0},
+    ],
+}
+
+probe_control_grp = {
+    "title": "Probe 0",
+    "name": "probe",
+    "type": "group",
+    "expanded": False,
+    "children": [
+        {
+            "name": "probe_name",
+            "title": "Probe Name",
+            "type": "str",
+            "value": "Probe 0",
+        },
+        {
+            "name": "is_plotted",
+            "title": "Plot in 3D",
+            "type": "bool",
+            "value": True,
+        },
+        grp_probe_lengths,
     ],
 }
 
@@ -169,10 +210,9 @@ class Plot3dDock(Dock):
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
 
+        self.plot_data_from_controls()
         # undeformed
         plot_model3d(self.plot_widget, col="green")
-
-        # self.update_plot(self.model_params)
 
         h_split = qtw.QSplitter(qtc.Horizontal)
         h_split.addWidget(self.tree)
@@ -184,6 +224,11 @@ class Plot3dDock(Dock):
         adds the controls that go in the side bar of each 3d plot
         """
         self.plot_controls = Parameter.create(**dock3d_control_grp)
+
+        probes_grp = self.plot_controls.child("probes_grp")
+        self.add_new_probe_grp(probes_grp)
+        self.add_new_probe_grp(probes_grp)
+        probes_grp.sigAddNew.connect(self.add_new_probe_grp)
 
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
@@ -217,19 +262,35 @@ class Plot3dDock(Dock):
 
     def plot_data_from_controls(self):
         """
-        create the self.plot_data dict of PlotData classes from current gui settings
-        For the 3d dock this is a plot for each unique probe used in any of the existing Plot2dDocks
-
-        For now define one zero length probe
+        create the self.plot_data dict of PlotData3d classes from current gui settings
+        For the 3d dock this is a plot for each probe
         """
-        # TODO replace with code to find unique used probes.
-        probe_names = ["probe 0"]
-        for name in probe_names:
+        for probe_child in self.plot_controls.child("probes_grp").children():
+            name = probe_child.name()
+            probe_name = probe_child.title()
             if name not in self.plot_data:
-                self.plot_data[name] = PlotData3d()
-                self.plot_data[name].lineplots = plot_model3d(
+                self.plot_data[probe_name] = PlotData3d()
+                self.plot_data[probe_name].lineplots = plot_model3d(
                     self.plot_widget, col="blue"
                 )
+            self.plot_data[probe_name].probe_name = probe_name
+
+    def add_new_probe_grp(self, parent):
+        """
+        add the controls for a new probe to the side bar
+        """
+        new_title = f"Probe {len(parent.childs)}"
+        grp_params = probe_control_grp.copy()
+        grp_params["title"] = new_title
+        grp_params["children"][0]["value"] = new_title
+        new_grp = parent.addChild(grp_params, autoIncrementName=True)
+        new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
+
+    def change_probe_name(self, param):
+        """
+        event handler for a change in probe name
+        """
+        param.parent().setOpts(title=param.value())
 
 
 # MARK: 2D Plots
@@ -258,17 +319,6 @@ grp_rotation = {
     ],
 }
 
-grp_probe_lengths = {
-    "title": "Probe Lengths",
-    "name": "grp_probe_lengths",
-    "type": "group",
-    "expanded": False,
-    "children": [
-        {"name": "X", "type": "float", "value": 0.0},
-        {"name": "Y", "type": "float", "value": 0.0},
-        {"name": "Z", "type": "float", "value": 0.0},
-    ],
-}
 
 default_artefacts = {
     "KOBA 0620": {"ball_spacing": 133, "nballs": (5, 5)},
@@ -322,9 +372,14 @@ plot2d_control_grp = {
             "type": "str",
             "value": "Plot 0",
         },
+        {
+            "name": "probe",
+            "title": "Probe",
+            "type": "list",
+            "limits": [],
+        },
         grp_position,
         grp_rotation,
-        grp_probe_lengths,
     ],
 }
 
@@ -493,11 +548,12 @@ class Plot2dDock(Dock):
     knows how to draw and update itself based on the values in parameter tree
     """
 
-    def __init__(self, name, model_params):
+    def __init__(self, name, model_params, probes):
         super(Plot2dDock, self).__init__(name)
 
         self.magnification = 5000
         self.model_params = model_params
+        self.probe_list = probes
 
         self.plot_data = {}
         self.plot_widget = pg.PlotWidget(name=name)
@@ -544,6 +600,7 @@ class Plot2dDock(Dock):
         grp_params = plot2d_control_grp.copy()
         grp_params["title"] = new_title
         grp_params["children"][0]["value"] = new_title
+        grp_params["children"][1]["limits"] = self.probe_list.keys()
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
 
@@ -619,14 +676,24 @@ class Plot2dDock(Dock):
 
             euler_deg = plot_child.child("grp_rotation")
             origin = plot_child.child("grp_position")
-            probe = plot_child.child("grp_probe_lengths")
+            probe = plot_child.child("probe").value()
 
             eul = mu.Euler(child_to_vector(euler_deg, mfactor=np.deg2rad(1)))
             mat_rot = eul.to_matrix()
             mat_loc = mu.Matrix.Translation(child_to_vector(origin))
 
             self.plot_data[name].transform_mat = mat_loc @ mat_rot.to_4x4()
-            self.plot_data[name].probe_vec = child_to_vector(probe)
+            if probe:
+                self.plot_data[name].probe_vec = self.probe_list[probe].probe_vec
+            else:
+                self.plot_data[name].probe_vec = mu.Vector()
+            print(f"{self.plot_data[name].probe_vec}")
+
+    def change_probe_list(self, new_probe_list):
+        self.probe_list = new_probe_list
+        for plot_child in self.plot_controls.child("plots_grp").children():
+            probe = plot_child.child("probe")
+            probe.setLimits(self.probe_list.keys())
 
 
 def child_to_vector(child: Parameter, mfactor=1.0) -> mu.Vector:

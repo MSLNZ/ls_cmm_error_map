@@ -109,35 +109,12 @@ class MainWindow(qtw.QMainWindow):
 
         return slider_group
 
-    def make_3d_plot_controls(self) -> (Parameter, ParameterTree):
-        """
-        returns the controls that go in the sidebar of the 3d plot
-        """
-
-        plot3d_params = Parameter.create(name="params", type="group")
-        plot_controls = plot3d_params.addChild(
-            dict(type="group", name="plot_controls", title="Plot Controls")
-        )
-        plot_controls.addChild(
-            dict(
-                type="slider",
-                name="slider_mag",
-                title="Magnification",
-                span=gc.magnification_span,
-                value=5000,
-            )
-        )
-        plot_controls.sigTreeStateChanged.connect(self.update_model)
-        plot3d_tree = ParameterTree(showHeader=False)
-        plot3d_tree.setParameters(plot3d_params, showTop=False)
-        return plot3d_params, plot3d_tree
-
     def add_startup_docks(self):
         """
         add the 3d plot dock
         """
         # self.plotlines3d, self.plot3d = self.make_plot3d()
-        self.plot3d_params, self.plot3d_tree = self.make_3d_plot_controls()
+        # self.plot3d_params, self.plot3d_tree = self.make_3d_plot_controls()
         # self.make_plot_dock(self.plot3d_tree, self.plot3d, "3d Deformation")
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.model_params)
         self.dock_area.addDock(self.plot3d_dock)
@@ -174,7 +151,11 @@ class MainWindow(qtw.QMainWindow):
         type of plot etc is set from side bar on dock
         can have lots of these
         """
-        new_plot_dock = gc.Plot2dDock("New Dock", self.model_params)
+        new_plot_dock = gc.Plot2dDock(
+            "New Dock",
+            self.model_params,
+            self.plot3d_dock.plot_data,
+        )
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
 
