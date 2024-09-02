@@ -4,10 +4,12 @@ main gui for cmm error map app
 """
 
 import pyqtgraph as pg
-import pyqtgraph.opengl as gl
+
+# import pyqtgraph.opengl as gl
 import pyqtgraph.Qt.QtWidgets as qtw
 import qdarktheme
-from pyqtgraph.dockarea.Dock import Dock
+
+# from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
@@ -24,6 +26,7 @@ class MainWindow(qtw.QMainWindow):
         self.slider_mag = 5000
         # list of added 2d plots
         self.plot2d_docks = []
+        self.plot3d_dock = None
         self.setup_gui()
         self.add_startup_docks()
         self.add_summary()
@@ -133,77 +136,37 @@ class MainWindow(qtw.QMainWindow):
         """
         add the 3d plot dock
         """
-        self.plotlines3d, self.plot3d = self.make_plot3d()
+        # self.plotlines3d, self.plot3d = self.make_plot3d()
         self.plot3d_params, self.plot3d_tree = self.make_3d_plot_controls()
-        self.make_plot_dock(self.plot3d_tree, self.plot3d, "3d Deformation")
-
-    def make_plot3d(self) -> (list, gl.GLViewWidget):
-        """
-        plot the 3d deformation of the CMM volume
-        """
-        plot3d = gl.GLViewWidget()
-        # TODO define CMM size and display spacing (xt, yt, zt)
-        xt = 100
-        yt = 100
-        zt = 100
-        # undeformed
-        gc.plot_model3d(plot3d, xt, yt, zt, col="green")
-        # deformed
-        plotlines = gc.plot_model3d(plot3d, xt, yt, zt, col="blue")
-        return plotlines, plot3d
-
-    def make_plot_dock(self, tree: ParameterTree, plot: gl.GLViewWidget, title: str):
-        """
-        add a dock with a parameter tree and a plot
-        """
-        h_split = qtw.QSplitter(qtc.Horizontal)
-        h_split.addWidget(tree)
-        h_split.addWidget(plot)
-        # h_split.setSizes([150, 600])
-        plot_dock = Dock(title)
-        plot_dock.addWidget(h_split)
-        self.dock_area.addDock(plot_dock)
+        # self.make_plot_dock(self.plot3d_tree, self.plot3d, "3d Deformation")
+        self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.model_params)
+        self.dock_area.addDock(self.plot3d_dock)
 
     def update_model(self, group, changes):
         """
         event callback for sliders
         """
-        contorl_name = changes[0][0].name()
+        control_name = changes[0][0].name()
         slider_value = changes[0][2]
-        if contorl_name in design.model_parameters_dict.keys():
-            slider_factor = gc.slider_factors[contorl_name]
-            self.model_params[contorl_name] = slider_value * slider_factor
-        elif contorl_name == "slider_mag":
+        if control_name in design.model_parameters_dict.keys():
+            slider_factor = gc.slider_factors[control_name]
+            self.model_params[control_name] = slider_value * slider_factor
+        elif control_name == "slider_mag":
             self.slider_mag = slider_value
-        elif contorl_name == "btn_reset_all":
+        elif control_name == "btn_reset_all":
             self.model_params = design.model_parameters_dict.copy()
             # update sliders
             with self.slider_group.treeChangeBlocker():
                 for axis_group in self.slider_group.child("linear_model").children():
                     for child in axis_group.children():
                         child.setValue(0.0)
-
-        self.update_plot3d()
-        for dock in self.plot2d_docks:
-            dock.update_plot(self.model_params)
-
-    def update_plot3d(self):
-        # TODO define CMM size and display spacing (xt, yt, zt)
-        xt = 100
-        yt = 100
-        zt = 100
         try:
-            gc.update_plot_model3d(
-                self.plotlines3d,
-                self.model_params,
-                xt,
-                yt,
-                zt,
-                self.slider_mag,
-            )
+            self.plot3d_dock.update_plot(self.model_params)
         except AttributeError:
             # plot not created yet
             pass
+        for dock in self.plot2d_docks:
+            dock.update_plot(self.model_params)
 
     def add_new_plot2d_dock(self):
         """

@@ -236,8 +236,6 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params, ballspacing=133.0, nballs=(5, 5)):
     yp = (ballnumber // nballs[1]) * ballspacing
     zp = ballnumber * 0.0
 
-    print(f"{xp=}")
-
     XP = np.vstack((xp, yp, zp, np.ones(ball_count)))
     # transfer to machine CSY
     XM = np.dot(RP, XP)

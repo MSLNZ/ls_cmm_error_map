@@ -42,13 +42,13 @@ magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 # MARK: 3D plots
 
 
-def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list[pg.PlotDataItem]:
+def plot_model3d(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
     """
     produces a 3D magniifed plot of the undeformed machine ready for updating with
     deformation via update_plot_model3d
     """
     params = [0.0] * 21
-    XYZ, eXYZ = design.machine_deformation(params, xt, yt, zt)
+    XYZ, eXYZ = design.machine_deformation(params, 0.0, 0.0, 0.0)
     pXYZ_3D = XYZ + eXYZ
 
     w.setCameraPosition(distance=2000)
@@ -102,7 +102,7 @@ def plot_model3d(w: gl.GLViewWidget, xt, yt, zt, col="white") -> list[pg.PlotDat
 
 
 def update_plot_model3d(
-    plot_lines: list[pg.PlotDataItem], params: dict, xt, yt, zt, mag
+    plot_lines: list[gl.GLLinePlotItem], params: dict, xt, yt, zt, mag
 ):
     """
     update a plot produced by plot_model3d with a new set of params
@@ -135,6 +135,101 @@ def update_plot_model3d(
             pts = pXYZ_3D[i, j, :, :]
             plot_lines[pn].setData(pos=pts)
             pn += 1
+
+
+dock3d_control_grp = {
+    "name": "dock3d_control_grp",
+    "title": "3D Plot",
+    "type": "group",
+    "children": [
+        {
+            "type": "slider",
+            "name": "slider_mag",
+            "title": "Magnification",
+            "span": magnification_span,
+            "value": 5000,
+        },
+    ],
+}
+
+
+class Plot3dDock(Dock):
+    """
+    a pyqtgraph Dock containing a 3D plot and a side bar with parameter tree controls
+    knows how to draw and update itself based on the values in parameter tree
+    """
+
+    def __init__(self, name, model_params):
+        super(Plot3dDock, self).__init__(name)
+
+        self.magnification = 5000
+        self.model_params = model_params
+
+        self.plot_data = {}
+        self.plot_widget = gl.GLViewWidget()
+        self.add_control_tree()
+
+        # undeformed
+        plot_model3d(self.plot_widget, col="green")
+
+        # self.update_plot(self.model_params)
+
+        h_split = qtw.QSplitter(qtc.Horizontal)
+        h_split.addWidget(self.tree)
+        h_split.addWidget(self.plot_widget)
+        self.addWidget(h_split)
+
+    def add_control_tree(self):
+        """
+        adds the controls that go in the side bar of each 3d plot
+        """
+        self.plot_controls = Parameter.create(**dock3d_control_grp)
+
+        slider_mag = self.plot_controls.child("slider_mag")
+        slider_mag.sigValueChanged.connect(self.change_magnification)
+
+        self.tree = ParameterTree(showHeader=False)
+        self.tree.setParameters(self.plot_controls, showTop=False)
+
+    def change_magnification(self, control):
+        """
+        event handler for a change in magnification
+        """
+        self.magnification = control.value()
+        self.update_plot(self.model_params)
+
+    def update_plot(self, model_params: dict):
+        """
+        updates the 3d plot with new model parameters from MainWindow model sliders
+        """
+        self.plot_data_from_controls()
+        self.model_params = model_params
+        for plot in self.plot_data.values():
+            xt, yt, zt = plot.probe_vec
+            update_plot_model3d(
+                plot.lineplots,
+                self.model_params,
+                xt,
+                yt,
+                zt,
+                self.magnification,
+            )
+
+    def plot_data_from_controls(self):
+        """
+        create the self.plot_data dict of PlotData classes from current gui settings
+        For the 3d dock this is a plot for each unique probe used in any of the existing Plot2dDocks
+
+        For now define one zero length probe
+        """
+        # TODO replace with code to find unique used probes.
+        probe_names = ["probe 0"]
+        for name in probe_names:
+            if name not in self.plot_data:
+                self.plot_data[name] = PlotData3d()
+                self.plot_data[name].lineplots = plot_model3d(
+                    self.plot_widget, col="blue"
+                )
 
 
 # MARK: 2D Plots
@@ -181,8 +276,8 @@ default_artefacts = {
     "KOBA 0320": {"ball_spacing": 60, "nballs": (5, 5)},
 }
 
-dock_control_grp = {
-    "name": "dock_control_grp",
+dock2d_control_grp = {
+    "name": "dock2d_control_grp",
     "title": "New Dock",
     "type": "group",
     "children": [
@@ -241,12 +336,28 @@ U95 = 1.2
 
 
 @dataclass
-class PlotData:
+class PlotData2d:
+    """
+    plot data for a 2d artefact
+    """
+
     title: str = "Plot 0"
     transform_mat: mu.Matrix = mu.Matrix()
     probe_vec: mu.Vector = mu.Vector()
     plot: pg.PlotWidget = None
     lineplots: list = field(default_factory=list[pg.PlotDataItem])
+
+
+@dataclass
+class PlotData3d:
+    """
+    plot data for a 3d machine deformation
+    """
+
+    probe_name: str = "probe 0"
+    probe_vec: mu.Vector = mu.Vector()
+    plot: gl.GLViewWidget = None
+    lineplots: list = field(default_factory=list[gl.GLLinePlotItem])
 
 
 def single_grid_plot_data(
@@ -301,8 +412,8 @@ def plot_ballplate(
     circles=True,
 ) -> list[pg.PlotDataItem]:
     """
-    pyqtgraph 2d pot of ballplate errors
-    takes a set of model parameters and produces a 2D magniifed plot of errors in ballplate mmt
+    pyqtgraph 2d plot of ballplate errors
+    basic undeformed plot
     """
 
     params = [0.0] * 21
@@ -315,7 +426,7 @@ def plot_ballplate(
             [0.0, 0.0, 0.0, 1.0],
         ]
     )
-    xt, yt, zt = 0.0, 0.0, -100.0
+    xt, yt, zt = 0.0, 0.0, 0.0
     lineplots = []
 
     mag = 1
@@ -392,7 +503,6 @@ class Plot2dDock(Dock):
         self.plot_widget = pg.PlotWidget(name=name)
         self.add_control_tree()
 
-        self.plot_data_from_controls()
         self.artefact = default_artefacts["KOBA 0620"]
 
         self.update_plot(self.model_params)
@@ -404,9 +514,9 @@ class Plot2dDock(Dock):
 
     def add_control_tree(self):
         """
-        returns the controls that go in the side bar of each 2d plot
+        adds the controls that go in the side bar of each 2d plot
         """
-        self.plot_controls = Parameter.create(**dock_control_grp)
+        self.plot_controls = Parameter.create(**dock2d_control_grp)
         dock_title = self.plot_controls.child("dock_title")
         dock_title.sigValueChanged.connect(self.change_dock_title)
 
@@ -442,7 +552,6 @@ class Plot2dDock(Dock):
         event handler for a change in artefact
         """
         self.artefact = param.value()
-        print(f"{self.artefact=}")
         self.update_plot(self.model_params)
 
     def change_plot_title(self, param):
@@ -504,7 +613,7 @@ class Plot2dDock(Dock):
             title = plot_child.title()
             # if an entry doesn't exist create a default one
             if name not in self.plot_data:
-                self.plot_data[name] = PlotData()
+                self.plot_data[name] = PlotData2d()
                 self.plot_data[name].lineplots = plot_ballplate(self.plot_widget)
             self.plot_data[name].title = title
 
