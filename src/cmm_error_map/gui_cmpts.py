@@ -149,13 +149,6 @@ dock3d_control_grp = {
             "span": magnification_span,
             "value": 5000,
         },
-        {
-            "name": "probes_grp",
-            "title": "Probes",
-            "type": "group",
-            "addText": "Add Probe",
-            "children": [],
-        },
     ],
 }
 
@@ -210,7 +203,6 @@ class Plot3dDock(Dock):
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
 
-        self.plot_data_from_controls()
         # undeformed
         plot_model3d(self.plot_widget, col="green")
 
@@ -224,11 +216,6 @@ class Plot3dDock(Dock):
         adds the controls that go in the side bar of each 3d plot
         """
         self.plot_controls = Parameter.create(**dock3d_control_grp)
-
-        # probes_grp = self.plot_controls.child("probes_grp")
-        # self.add_new_probe_grp(probes_grp)
-        # self.add_new_probe_grp(probes_grp)
-        # probes_grp.sigAddNew.connect(self.add_new_probe_grp)
 
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
@@ -247,7 +234,7 @@ class Plot3dDock(Dock):
         """
         updates the 3d plot with new model parameters from MainWindow model sliders
         """
-        self.plot_data_from_controls()
+        self.plot_data_from_probe_data()
         self.model_params = model_params
         for plot in self.plot_data.values():
             xt, yt, zt = plot.probe_vec
@@ -265,7 +252,7 @@ class Plot3dDock(Dock):
         create the self.probe_data dict of PlotData3d classes from probe name and vector
         stored in self.probe_dict
         """
-        for probe_name, probe in self.probe_data:
+        for probe_name, probe in self.probe_data.items():
             if probe_name not in self.plot_data:
                 self.plot_data[probe_name] = PlotData3d()
                 self.plot_data[probe_name].lineplots = plot_model3d(
@@ -281,23 +268,6 @@ class Plot3dDock(Dock):
         self.probe_data = probe_data
         self.plot_data_from_probe_data()
         self.update_plot(self.model_params)
-
-    # def add_new_probe_grp(self, parent):
-    #     """
-    #     add the controls for a new probe to the side bar
-    #     """
-    #     new_title = f"Probe {len(parent.childs)}"
-    #     grp_params = probe_control_grp.copy()
-    #     grp_params["title"] = new_title
-    #     grp_params["children"][0]["value"] = new_title
-    #     new_grp = parent.addChild(grp_params, autoIncrementName=True)
-    #     new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
-
-    # def change_probe_name(self, param):
-    #     """
-    #     event handler for a change in probe name
-    #     """
-    #     param.parent().setOpts(title=param.value())
 
 
 # MARK: 2D Plots
@@ -609,7 +579,7 @@ class Plot2dDock(Dock):
         grp_params["children"][0]["value"] = new_title
         # probe selection drop down should show probe_title but return probe_name
         # probe_title can be changed probe_name can't
-        limits = {value["probe_title"]: key for key, value in self.probe_data}
+        limits = {value["probe_title"]: key for key, value in self.probe_data.items()}
         grp_params["children"][1]["limits"] = limits
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
@@ -698,7 +668,6 @@ class Plot2dDock(Dock):
                 self.plot_data[name].probe_vec = probe["probe_vec"]
             else:
                 self.plot_data[name].probe_vec = mu.Vector()
-            print(f"{self.plot_data[name].probe_vec}")
 
     def update_probes(self, probe_data):
         """
@@ -709,7 +678,7 @@ class Plot2dDock(Dock):
 
         # probe selection drop down should show probe_title but return probe_name
         # probe_title can be changed probe_name can't
-        limits = {value["probe_title"]: key for key, value in self.probe_data}
+        limits = {value["probe_title"]: key for key, value in self.probe_data.items()}
         for plot_child in self.plot_controls.child("plots_grp").children():
             probe = plot_child.child("probe")
             probe.setLimits(limits)

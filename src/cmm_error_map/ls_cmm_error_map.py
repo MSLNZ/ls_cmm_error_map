@@ -36,9 +36,11 @@ class MainWindow(qtw.QMainWindow):
         self.summary = qtw.QTextEdit()
         self.slider_group = self.make_model_sliders()
         self.probes_group = self.make_probe_controls()
+
         self.control_group = Parameter.create(type="group", name="main_controls")
+
         self.control_group.addChild(self.slider_group)
-        self.control_group.addChild(self.control_group)
+        self.control_group.addChild(self.probes_group)
 
         # other controls
         btn_plot = self.control_group.addChild(
@@ -121,12 +123,12 @@ class MainWindow(qtw.QMainWindow):
         )
         self.add_new_probe_group(probes_group)
         self.add_new_probe_group(probes_group)
-        probes_group.sigAddNew.connect(self.add_new_probe_grp)
+        probes_group.sigAddNew.connect(self.add_new_probe_group)
         probes_group.sigTreeStateChanged.connect(self.update_probes)
 
         return probes_group
 
-    def add_new_probe_grp(self, parent):
+    def add_new_probe_group(self, parent):
         """
         add the controls for a new probe to the side bar
         """
@@ -156,8 +158,11 @@ class MainWindow(qtw.QMainWindow):
                 "probe_title": probe_child.title(),
                 "probe_vec": probe_vec,
             }
-
-        self.plot3d_dock.update_probes(self.probe_data)
+        try:
+            self.plot3d_dock.update_probes(self.probe_data)
+        except AttributeError:
+            # plot not created yet
+            pass
         for dock in self.plot2d_docks:
             dock.update_probes(self.probe_data)
 
@@ -165,11 +170,9 @@ class MainWindow(qtw.QMainWindow):
         """
         add the 3d plot dock
         """
-        # self.plotlines3d, self.plot3d = self.make_plot3d()
-        # self.plot3d_params, self.plot3d_tree = self.make_3d_plot_controls()
-        # self.make_plot_dock(self.plot3d_tree, self.plot3d, "3d Deformation")
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.model_params)
         self.dock_area.addDock(self.plot3d_dock)
+        self.update_probes()
 
     def update_model(self, group, changes):
         """
@@ -193,6 +196,7 @@ class MainWindow(qtw.QMainWindow):
             self.plot3d_dock.update_plot(self.model_params)
         except AttributeError:
             # plot not created yet
+            print("no 3d plot yet")
             pass
         for dock in self.plot2d_docks:
             dock.update_plot(self.model_params)
@@ -206,7 +210,7 @@ class MainWindow(qtw.QMainWindow):
         new_plot_dock = gc.Plot2dDock(
             "New Dock",
             self.model_params,
-            self.plot3d_dock.plot_data,
+            self.probe_data,
         )
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
