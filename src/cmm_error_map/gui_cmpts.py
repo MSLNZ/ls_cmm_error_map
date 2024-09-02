@@ -225,10 +225,10 @@ class Plot3dDock(Dock):
         """
         self.plot_controls = Parameter.create(**dock3d_control_grp)
 
-        probes_grp = self.plot_controls.child("probes_grp")
-        self.add_new_probe_grp(probes_grp)
-        self.add_new_probe_grp(probes_grp)
-        probes_grp.sigAddNew.connect(self.add_new_probe_grp)
+        # probes_grp = self.plot_controls.child("probes_grp")
+        # self.add_new_probe_grp(probes_grp)
+        # self.add_new_probe_grp(probes_grp)
+        # probes_grp.sigAddNew.connect(self.add_new_probe_grp)
 
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
@@ -260,37 +260,44 @@ class Plot3dDock(Dock):
                 self.magnification,
             )
 
-    def plot_data_from_controls(self):
+    def plot_data_from_probe_data(self):
         """
-        create the self.plot_data dict of PlotData3d classes from current gui settings
-        For the 3d dock this is a plot for each probe
+        create the self.probe_data dict of PlotData3d classes from probe name and vector
+        stored in self.probe_dict
         """
-        for probe_child in self.plot_controls.child("probes_grp").children():
-            name = probe_child.name()
-            probe_name = probe_child.title()
-            if name not in self.plot_data:
+        for probe_name, probe in self.probe_data:
+            if probe_name not in self.plot_data:
                 self.plot_data[probe_name] = PlotData3d()
                 self.plot_data[probe_name].lineplots = plot_model3d(
                     self.plot_widget, col="blue"
                 )
-            self.plot_data[probe_name].probe_name = probe_name
+            self.plot_data[probe_name].probe_title = probe["probe_title"]
+            self.plot_data[probe_name].probe_vec = probe["probe_vec"]
 
-    def add_new_probe_grp(self, parent):
+    def update_probes(self, probe_data):
         """
-        add the controls for a new probe to the side bar
+        called in response to any changes to probes in MainWindow
         """
-        new_title = f"Probe {len(parent.childs)}"
-        grp_params = probe_control_grp.copy()
-        grp_params["title"] = new_title
-        grp_params["children"][0]["value"] = new_title
-        new_grp = parent.addChild(grp_params, autoIncrementName=True)
-        new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
+        self.probe_data = probe_data
+        self.plot_data_from_probe_data()
+        self.update_plot(self.model_params)
 
-    def change_probe_name(self, param):
-        """
-        event handler for a change in probe name
-        """
-        param.parent().setOpts(title=param.value())
+    # def add_new_probe_grp(self, parent):
+    #     """
+    #     add the controls for a new probe to the side bar
+    #     """
+    #     new_title = f"Probe {len(parent.childs)}"
+    #     grp_params = probe_control_grp.copy()
+    #     grp_params["title"] = new_title
+    #     grp_params["children"][0]["value"] = new_title
+    #     new_grp = parent.addChild(grp_params, autoIncrementName=True)
+    #     new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
+
+    # def change_probe_name(self, param):
+    #     """
+    #     event handler for a change in probe name
+    #     """
+    #     param.parent().setOpts(title=param.value())
 
 
 # MARK: 2D Plots
@@ -409,7 +416,7 @@ class PlotData3d:
     plot data for a 3d machine deformation
     """
 
-    probe_name: str = "probe 0"
+    probe_title: str = "probe 0"
     probe_vec: mu.Vector = mu.Vector()
     plot: gl.GLViewWidget = None
     lineplots: list = field(default_factory=list[gl.GLLinePlotItem])
@@ -548,12 +555,12 @@ class Plot2dDock(Dock):
     knows how to draw and update itself based on the values in parameter tree
     """
 
-    def __init__(self, name, model_params, probes):
+    def __init__(self, name, model_params, probe_data):
         super(Plot2dDock, self).__init__(name)
 
         self.magnification = 5000
         self.model_params = model_params
-        self.probe_list = probes
+        self.probe_data = probe_data
 
         self.plot_data = {}
         self.plot_widget = pg.PlotWidget(name=name)
@@ -600,7 +607,10 @@ class Plot2dDock(Dock):
         grp_params = plot2d_control_grp.copy()
         grp_params["title"] = new_title
         grp_params["children"][0]["value"] = new_title
-        grp_params["children"][1]["limits"] = self.probe_list.keys()
+        # probe selection drop down should show probe_title but return probe_name
+        # probe_title can be changed probe_name can't
+        limits = {value["probe_title"]: key for key, value in self.probe_data}
+        grp_params["children"][1]["limits"] = limits
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
 
@@ -676,24 +686,36 @@ class Plot2dDock(Dock):
 
             euler_deg = plot_child.child("grp_rotation")
             origin = plot_child.child("grp_position")
-            probe = plot_child.child("probe").value()
+            probe_name = plot_child.child("probe").value()
 
             eul = mu.Euler(child_to_vector(euler_deg, mfactor=np.deg2rad(1)))
             mat_rot = eul.to_matrix()
             mat_loc = mu.Matrix.Translation(child_to_vector(origin))
 
             self.plot_data[name].transform_mat = mat_loc @ mat_rot.to_4x4()
-            if probe:
-                self.plot_data[name].probe_vec = self.probe_list[probe].probe_vec
+            if probe_name:
+                probe = self.probe_data[probe_name]
+                self.plot_data[name].probe_vec = probe["probe_vec"]
             else:
                 self.plot_data[name].probe_vec = mu.Vector()
             print(f"{self.plot_data[name].probe_vec}")
 
-    def change_probe_list(self, new_probe_list):
-        self.probe_list = new_probe_list
+    def update_probes(self, probe_data):
+        """
+        called in response to any changes to probes in MainWindow
+        """
+        self.probe_data = probe_data
+        # update the displayed list of probes for each plot control
+
+        # probe selection drop down should show probe_title but return probe_name
+        # probe_title can be changed probe_name can't
+        limits = {value["probe_title"]: key for key, value in self.probe_data}
         for plot_child in self.plot_controls.child("plots_grp").children():
             probe = plot_child.child("probe")
-            probe.setLimits(self.probe_list.keys())
+            probe.setLimits(limits)
+
+        # update the plots in case the probe lengths changed
+        self.update_plot(self.model_params)
 
 
 def child_to_vector(child: Parameter, mfactor=1.0) -> mu.Vector:

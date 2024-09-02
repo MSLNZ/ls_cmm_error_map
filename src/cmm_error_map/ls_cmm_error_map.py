@@ -35,8 +35,11 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
         self.slider_group = self.make_model_sliders()
+        self.probes_group = self.make_probe_controls()
         self.control_group = Parameter.create(type="group", name="main_controls")
         self.control_group.addChild(self.slider_group)
+        self.control_group.addChild(self.control_group)
+
         # other controls
         btn_plot = self.control_group.addChild(
             dict(type="action", name="btn_plot", title="Add Plot Dock")
@@ -108,6 +111,55 @@ class MainWindow(qtw.QMainWindow):
         slider_group.sigTreeStateChanged.connect(self.update_model)
 
         return slider_group
+
+    def make_probe_controls(self):
+        """
+        make control group for probes
+        """
+        probes_group = Parameter.create(
+            type="group", title="Probes", name="probes_group", addText="Add Probe"
+        )
+        self.add_new_probe_group(probes_group)
+        self.add_new_probe_group(probes_group)
+        probes_group.sigAddNew.connect(self.add_new_probe_grp)
+        probes_group.sigTreeStateChanged.connect(self.update_probes)
+
+        return probes_group
+
+    def add_new_probe_grp(self, parent):
+        """
+        add the controls for a new probe to the side bar
+        """
+        new_title = f"Probe {len(parent.childs)}"
+        grp_params = gc.probe_control_grp.copy()
+        grp_params["title"] = new_title
+        grp_params["children"][0]["value"] = new_title
+        new_grp = parent.addChild(grp_params, autoIncrementName=True)
+        new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
+
+    def change_probe_name(self, param):
+        """
+        event handler for a change in probe name
+        """
+        param.parent().setOpts(title=param.value())
+
+    def update_probes(self):
+        """
+        create self.probes_dict from self.probes_group
+        call update_probes method of all docks
+        """
+        self.probe_data = {}
+        for probe_child in self.probes_group.children():
+            probe_name = probe_child.name()
+            probe_vec = gc.child_to_vector(probe_child.child("grp_probe_lengths"))
+            self.probe_data[probe_name] = {
+                "probe_title": probe_child.title(),
+                "probe_vec": probe_vec,
+            }
+
+        self.plot3d_dock.update_probes(self.probe_data)
+        for dock in self.plot2d_docks:
+            dock.update_probes(self.probe_data)
 
     def add_startup_docks(self):
         """
