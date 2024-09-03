@@ -39,6 +39,31 @@ x = np.array([1, 2, 5, 7.5])
 magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 
 
+@dataclass
+class PlotData2d:
+    """
+    plot data for a 2d artefact
+    """
+
+    title: str = "Plot 0"
+    transform_mat: mu.Matrix = mu.Matrix()
+    probe_vec: mu.Vector = mu.Vector()
+    plot: pg.PlotWidget = None
+    lineplots: list = field(default_factory=list[pg.PlotDataItem])
+
+
+@dataclass
+class PlotData3d:
+    """
+    plot data for a 3d machine deformation
+    """
+
+    probe_title: str = "probe 0"
+    probe_vec: mu.Vector = mu.Vector()
+    plot: gl.GLViewWidget = None
+    lineplots: list = field(default_factory=list[gl.GLLinePlotItem])
+
+
 # MARK: 3D plots
 
 
@@ -223,6 +248,25 @@ class Plot3dDock(Dock):
         self.tree = ParameterTree(showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=False)
 
+    def plot_ball_plate(self, artefact: dict, plot_data_2d: PlotData2d):
+        """
+        plots an outline of the given artefact at the transform defined by
+        plot_data_2d.transform_mat
+        """
+        print("plotting ball plate in 3d space")
+
+        xballs = artefact["nballs"][0]
+        yballs = artefact["nballs"][0]
+        ball_count = xballs * yballs
+        ballnumber = np.arange(ball_count)
+        xp = (ballnumber % xballs) * ballspacing
+        yp = (ballnumber // yballs) * ballspacing
+        xyz1 = np.stack((xp, yp, np.zeros_like(xp), np.ones_like(xp)))
+        pts = np.array(plot_data_2d.transform_mat) @ xyz1
+        col = "red"
+        plt = gl.GLScatterPlotItem(pos=pts.T, color=pg.mkColor(col))
+        self.plot_widget.addItem(plt)
+
     def change_magnification(self, control):
         """
         event handler for a change in magnification
@@ -365,31 +409,6 @@ plot2d_control_grp = {
 ballspacing = 133.0
 
 U95 = 1.2
-
-
-@dataclass
-class PlotData2d:
-    """
-    plot data for a 2d artefact
-    """
-
-    title: str = "Plot 0"
-    transform_mat: mu.Matrix = mu.Matrix()
-    probe_vec: mu.Vector = mu.Vector()
-    plot: pg.PlotWidget = None
-    lineplots: list = field(default_factory=list[pg.PlotDataItem])
-
-
-@dataclass
-class PlotData3d:
-    """
-    plot data for a 3d machine deformation
-    """
-
-    probe_title: str = "probe 0"
-    probe_vec: mu.Vector = mu.Vector()
-    plot: gl.GLViewWidget = None
-    lineplots: list = field(default_factory=list[gl.GLLinePlotItem])
 
 
 def single_grid_plot_data(

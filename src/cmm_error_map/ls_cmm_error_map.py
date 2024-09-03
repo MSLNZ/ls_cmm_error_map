@@ -165,6 +165,8 @@ class MainWindow(qtw.QMainWindow):
             pass
         for dock in self.plot2d_docks:
             dock.update_probes(self.probe_data)
+            for plot in dock.plot_data.values():
+                self.plot3d_dock.plot_ball_plate(dock.artefact, plot)
 
     def add_startup_docks(self):
         """
@@ -214,6 +216,7 @@ class MainWindow(qtw.QMainWindow):
         )
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
+        self.update_probes()
 
     def add_summary(self):
         text = "Summary\n"
