@@ -7,23 +7,26 @@ import pyqtgraph as pg
 
 # import pyqtgraph.opengl as gl
 import pyqtgraph.Qt.QtWidgets as qtw
+from pyqtgraph.Qt.QtCore import Qt as qtc
+import pyqtgraph.Qt.QtGui as qtg
+
 import qdarktheme
 
 # from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pyqtgraph.Qt.QtCore import Qt as qtc
+
 
 import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.gui_cmpts as gc
+import cmm_error_map.data_cmpts as dc
 
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.model_params = design.model_parameters_dict.copy()
+        self.machine = dc.pmm_866
 
-        self.slider_mag = 5000
         # list of added 2d plots
         self.plot2d_docks = []
         self.plot3d_dock = None
@@ -151,20 +154,25 @@ class MainWindow(qtw.QMainWindow):
         call update_probes method of all docks
         """
         self.probe_data = {}
+        self.machine.probes = {}
         for probe_child in self.probes_group.children():
             probe_name = probe_child.name()
-            probe_vec = gc.child_to_vector(probe_child.child("grp_probe_lengths"))
-            self.probe_data[probe_name] = {
-                "probe_title": probe_child.title(),
-                "probe_vec": probe_vec,
-            }
+            grp_probe = probe_child.child("grp_probe_lengths")
+            vprobe = [grand_kid.value() for grand_kid in grp_probe]
+            probe_vec = qtg.QVector3D(*vprobe)
+            # self.probe_data[probe_name] = {
+            #     "probe_title": probe_child.title(),
+            #     "probe_vec": probe_vec,
+            # }
+            probe = dc.Probe(title=probe_child.title(), length=probe_vec)
+            self.machine.probes[probe_name] = probe
         try:
-            self.plot3d_dock.update_probes(self.probe_data)
+            self.plot3d_dock.update_probes()
         except AttributeError:
             # plot not created yet
             pass
         for dock in self.plot2d_docks:
-            dock.update_probes(self.probe_data)
+            dock.update_probes()
             for plot in dock.plot_data.values():
                 self.plot3d_dock.plot_ball_plate(dock.artefact, plot)
 
@@ -172,7 +180,7 @@ class MainWindow(qtw.QMainWindow):
         """
         add the 3d plot dock
         """
-        self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.model_params)
+        self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
         self.update_probes()
 
@@ -184,24 +192,22 @@ class MainWindow(qtw.QMainWindow):
         slider_value = changes[0][2]
         if control_name in design.model_parameters_dict.keys():
             slider_factor = gc.slider_factors[control_name]
-            self.model_params[control_name] = slider_value * slider_factor
-        elif control_name == "slider_mag":
-            self.slider_mag = slider_value
+            self.machine.model_params[control_name] = slider_value * slider_factor
         elif control_name == "btn_reset_all":
-            self.model_params = design.model_parameters_dict.copy()
+            self.machine.model_params = design.model_parameters_dict.copy()
             # update sliders
             with self.slider_group.treeChangeBlocker():
                 for axis_group in self.slider_group.child("linear_model").children():
                     for child in axis_group.children():
                         child.setValue(0.0)
         try:
-            self.plot3d_dock.update_plot(self.model_params)
+            self.plot3d_dock.update_plot()
         except AttributeError:
             # plot not created yet
             print("no 3d plot yet")
             pass
         for dock in self.plot2d_docks:
-            dock.update_plot(self.model_params)
+            dock.update_plot()
 
     def add_new_plot2d_dock(self):
         """
@@ -209,14 +215,14 @@ class MainWindow(qtw.QMainWindow):
         type of plot etc is set from side bar on dock
         can have lots of these
         """
-        new_plot_dock = gc.Plot2dDock(
-            "New Dock",
-            self.model_params,
-            self.probe_data,
-        )
+        new_plot_dock = gc.Plot2dDock("New Dock", self.machine)
+        new_plot_dock.update_gui.connect(self.gui_update_request)
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
         self.update_probes()
+
+    def gui_update_request(self, arg):
+        print("received a gui update request")
 
     def add_summary(self):
         text = "Summary\n"
