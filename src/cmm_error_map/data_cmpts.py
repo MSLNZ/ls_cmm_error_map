@@ -53,6 +53,7 @@ class Probe:
 
 @dataclass
 class Measurement:
+    title: str
     artefact: ArtefactType
     transform3d: pg.Transform3D
     probe: Probe
@@ -122,7 +123,7 @@ pmm_866 = Machine(
         fixed_table=False,
         bridge_axis=1,
     ),
-    measurements=[],
-    probes=[],
+    measurements={},
+    probes={},
     model_params=design.model_parameters_dict.copy(),
 )

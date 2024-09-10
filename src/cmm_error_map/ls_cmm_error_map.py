@@ -212,7 +212,11 @@ class MainWindow(qtw.QMainWindow):
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mmt = dc.Measurement(
-                artefact=artefact, transform3d=transform3d, probe=probe, data=None
+                title=mmt_child.title(),
+                artefact=artefact,
+                transform3d=transform3d,
+                probe=probe,
+                data=None,
             )
             self.machine.mesurements[mmt_name] = mmt
 

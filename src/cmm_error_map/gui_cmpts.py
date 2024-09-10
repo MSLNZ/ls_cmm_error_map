@@ -3,15 +3,18 @@ from dataclasses import dataclass, field
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
-import pyqtgraph.Qt.QtWidgets as qtw
+
+# import pyqtgraph.Qt.QtWidgets as qtw
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pyqtgraph.Qt.QtCore import Qt as qtc
+
+# from pyqtgraph.Qt.QtCore import Qt as qtc
 import pyqtgraph.Qt.QtGui as qtg
 
 from PySide6.QtCore import Signal
 
 import cmm_error_map.design_matrix_linear_fixed as design
+import cmm_error_map.data_cmpts as dc
 
 slider_factors = {
     "Txx": 1e-6,
@@ -47,17 +50,14 @@ default_artefacts = {
 }
 
 
-@dataclass
-class PlotData2d:
-    """
-    plot data for a 2d artefact
-    """
+# @dataclass
+# class PlotData2d:
+#     """
+#     plot data for a 2d artefact
+#     """
 
-    title: str = "Plot 0"
-    transform3d: pg.Transform3D = None
-    probe_vec: qtg.QVector3D = None
-    plot: pg.PlotWidget = None
-    lineplots: list = field(default_factory=list[pg.PlotDataItem])
+#     plot: pg.PlotWidget = None
+#     lineplots: list = field(default_factory=list[pg.PlotDataItem])
 
 
 @dataclass
@@ -189,6 +189,18 @@ dock3d_control_grp = {
     "type": "group",
     "children": [
         {
+            "name": "probe_box",
+            "title": "Probe for Box Deformation",
+            "type": "list",
+            "limits": [],
+        },
+        {
+            "name": "mmts_to_plot",
+            "title": "To Plot",
+            "type": "checklist",
+            "limits": [],
+        },
+        {
             "type": "slider",
             "name": "slider_mag",
             "title": "Magnification",
@@ -294,20 +306,18 @@ class Plot3dDock(Dock):
         super(Plot3dDock, self).__init__(name)
 
         self.magnification = 5000
-        self.machine = machine
+        self.machine: dc.Machine = machine
 
-        self.plot_data = {}
-        self.artefacts = {}
+        self.plot_data: dict[str, list[gl.GLLinePlotItem]] = {}
+        self.box_lineplots: list[gl.GLLinePlotItem] = []
+
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
 
         # undeformed
         plot_model3d(self.plot_widget, col="green")
 
-        h_split = qtw.QSplitter(qtc.Horizontal)
-        h_split.addWidget(self.tree)
-        h_split.addWidget(self.plot_widget)
-        self.addWidget(h_split)
+        self.addWidget(self.plot_widget)
 
     def add_control_tree(self):
         """
@@ -318,92 +328,84 @@ class Plot3dDock(Dock):
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
 
-        self.tree = ParameterTree(showHeader=False)
+        self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
+        mmt_choices = {
+            value.title: key for key, value in self.machine.measurements.items()
+        }
+        self.mmts_to_plot.setLimits(mmt_choices)
+        self.mmts_to_plot.sigValueChanged.connect(self.replot)
+
+        self.probe_box = self.plot_controls.child("probe_box")
+        probe_choices = {value.title: key for key, value in self.machine.probes.items()}
+        self.probe_box.setLimits(probe_choices)
+        self.probe_box.sigValueChanged.connect(self.replot)
+
+        self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=False)
+        self.tree.move(0, 0)
 
-    def plot_ball_plate(self, artefact: dict, plot_data_2d: PlotData2d):
-        """
-        plots an outline of the given artefact at the transform defined by
-        plot_data_2d.transform3d
-        """
-        new_artefact = ArtefactData3d()
-        new_artefact.title = artefact["title"]
-        new_artefact.ball_spacing = artefact["ball_spacing"]
-        new_artefact.nballs = artefact["nballs"]
+    # def plot_ball_plate(self, artefact: dict, plot_data_2d: PlotData2d):
+    #     """
+    #     plots an outline of the given artefact at the transform defined by
+    #     plot_data_2d.transform3d
+    #     """
+    #     new_artefact = ArtefactData3d()
+    #     new_artefact.title = artefact["title"]
+    #     new_artefact.ball_spacing = artefact["ball_spacing"]
+    #     new_artefact.nballs = artefact["nballs"]
 
-        xballs = artefact["nballs"][0]
-        yballs = artefact["nballs"][0]
-        ball_count = xballs * yballs
-        ballnumber = np.arange(ball_count)
-        ballspacing = artefact["ball_spacing"]
-        sizex = (xballs - 1) * ballspacing
-        sizey = (yballs - 1) * ballspacing
+    #     xballs = artefact["nballs"][0]
+    #     yballs = artefact["nballs"][0]
+    #     ball_count = xballs * yballs
+    #     ballnumber = np.arange(ball_count)
+    #     ballspacing = artefact["ball_spacing"]
+    #     sizex = (xballs - 1) * ballspacing
+    #     sizey = (yballs - 1) * ballspacing
 
-        xp = (ballnumber % xballs) * ballspacing
-        yp = (ballnumber // yballs) * ballspacing
-        xyz1 = np.stack((xp, yp, np.zeros_like(xp), np.ones_like(xp)))
-        pts = plot_data_2d.transform3d.matrix() @ xyz1
-        col = "red"
-        new_artefact.points = gl.GLScatterPlotItem(pos=pts.T, color=pg.mkColor(col))
+    #     xp = (ballnumber % xballs) * ballspacing
+    #     yp = (ballnumber // yballs) * ballspacing
+    #     xyz1 = np.stack((xp, yp, np.zeros_like(xp), np.ones_like(xp)))
+    #     pts = plot_data_2d.transform3d.matrix() @ xyz1
+    #     col = "red"
+    #     new_artefact.points = gl.GLScatterPlotItem(pos=pts.T, color=pg.mkColor(col))
 
-        grid = gl.GLGridItem(color=pg.mkColor("red"))
-        grid.setSize(sizex, sizey, 0)
-        grid.setSpacing(ballspacing, ballspacing, 0)
-        grid.translate(sizex / 2, sizey / 2, 0)
+    #     grid = gl.GLGridItem(color=pg.mkColor("red"))
+    #     grid.setSize(sizex, sizey, 0)
+    #     grid.setSpacing(ballspacing, ballspacing, 0)
+    #     grid.translate(sizex / 2, sizey / 2, 0)
 
-        new_artefact.grid = grid
-        self.artefacts[new_artefact.title] = new_artefact
+    #     new_artefact.grid = grid
+    #     self.artefacts[new_artefact.title] = new_artefact
 
-        self.plot_widget.addItem(new_artefact.points)
-        self.plot_widget.addItem(grid)
-
-    def update_ball_plate(self):
-        for artefact in self.artefacts.values():
-            pass
+    #     self.plot_widget.addItem(new_artefact.points)
+    #     self.plot_widget.addItem(grid)
 
     def change_magnification(self, control):
         """
         event handler for a change in magnification
         """
         self.magnification = control.value()
-        self.update_plot()
+        self.replot()
 
-    def update_plot(self):
+    def replot(self):
         """
-        updates the 3d plot with new model parameters from MainWindow model sliders
+        redraws the 3d box deformation plot from data in self.machine.measurements
         """
-        self.plot_data_from_probe_data()
-        for plot in self.plot_data.values():
-            xt, yt, zt = plot.probe_vec.x(), plot.probe_vec.y(), plot.probe_vec.z()
-            update_plot_model3d(
-                plot.lineplots,
-                self.machine.model_params,
-                xt,
-                yt,
-                zt,
-                self.magnification,
-            )
+        probe_box_name = self.probe_box.value()
+        vprobe = self.machine.probes[probe_box_name].length
+        xt, yt, zt = vprobe.x(), vprobe.y(), vprobe.z()
+        if len(self.box_lineplots) == 0:
+            # haven't plotted the box deformation yet
+            self.box_lineplots = plot_model3d(self.plot_widget, col="blue")
 
-    def plot_data_from_probe_data(self):
-        """
-        create the self.plot_data dict of PlotData3d classes from probe name and vector
-        stored in self.machine.probes
-        """
-        for probe_name, probe in self.machine.probes.items():
-            if probe_name not in self.plot_data:
-                self.plot_data[probe_name] = PlotData3d()
-                self.plot_data[probe_name].lineplots = plot_model3d(
-                    self.plot_widget, col="blue"
-                )
-            self.plot_data[probe_name].probe_title = probe.title
-            self.plot_data[probe_name].probe_vec = probe.length
-
-    def update_probes(self):
-        """
-        called in response to any changes to probes in MainWindow
-        """
-        self.plot_data_from_probe_data()
-        self.update_plot()
+        update_plot_model3d(
+            self.box_lineplots,
+            self.machine.model_params,
+            xt,
+            yt,
+            zt,
+            self.magnification,
+        )
 
 
 # MARK: 2D Plots
@@ -411,9 +413,9 @@ class Plot3dDock(Dock):
 # parameter structures for 2d plot controls
 
 
-plot2d_control_grp = {
-    "title": "Plot 0",
-    "name": "plot",
+dock2d_control_grp = {
+    "title": "Contols",
+    "name": "plot_controls",
     "type": "group",
     "expanded": False,
     "children": [
@@ -424,13 +426,18 @@ plot2d_control_grp = {
             "value": "Plot 0",
         },
         {
-            "name": "probe",
-            "title": "Probe",
-            "type": "list",
+            "name": "mmts_to_plot",
+            "title": "To Plot",
+            "type": "checklist",
             "limits": [],
         },
-        grp_location,
-        grp_rotation,
+        {
+            "type": "slider",
+            "name": "slider_mag",
+            "title": "Magnification",
+            "span": magnification_span,
+            "value": 5000,
+        },
     ],
 }
 
@@ -582,175 +589,88 @@ class Plot2dDock(Dock):
         self.magnification = 5000
         self.machine = machine
 
-        self.plot_data = {}
+        self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
-        # self.add_control_tree()
+        self.add_control_tree()
 
-        self.artefact = default_artefacts["KOBA 0620"]
-
-        # self.update_plot()
-
-        h_split = qtw.QSplitter(qtc.Horizontal)
-        h_split.addWidget(self.tree)
-        h_split.addWidget(self.plot_widget)
-        self.addWidget(h_split)
+        self.addWidget(self.plot_widget)
 
     def request_update_gui(self):
         self.update_gui.emit(self.name)
 
-    # def add_control_tree(self):
-    #     """
-    #     adds the controls that go in the side bar of each 2d plot
-    #     """
-    #     self.plot_controls = Parameter.create(**dock2d_control_grp)
-    #     dock_title = self.plot_controls.child("dock_title")
-    #     dock_title.sigValueChanged.connect(self.change_dock_title)
+    def add_control_tree(self):
+        """
+        adds the controls that go in the overlay at top left
+        """
+        self.plot_controls = Parameter.create(**dock2d_control_grp)
+        plot_title = self.plot_controls.child("plot_title")
+        plot_title.sigValueChanged.connect(self.change_plot_title)
 
-    #     plots_grp = self.plot_controls.child("plots_grp")
-    #     self.add_new_plot_grp(plots_grp)
-    #     plots_grp.sigAddNew.connect(self.add_new_plot_grp)
+        slider_mag = self.plot_controls.child("slider_mag")
+        slider_mag.sigValueChanged.connect(self.change_magnification)
 
-    #     plots_grp.sigTreeStateChanged.connect(self.update_plot)
-    #     plots_grp.sigTreeStateChanged.connect(self.request_update_gui)
-    #     slider_mag = self.plot_controls.child("slider_mag")
-    #     slider_mag.sigValueChanged.connect(self.change_magnification)
+        self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
+        limits = {value.title: key for key, value in self.machine.measurements.items()}
+        self.mmts_to_plot.setLimits(limits)
+        self.mmts_to_plot.sigValueChanged.connect(self.replot)
 
-    #     artefact = self.plot_controls.child("artefact")
-    #     artefact.sigValueChanged.connect(self.change_artefact)
+        self.tree = ParameterTree(self.plot_widget, showHeader=False)
+        self.tree.setParameters(self.plot_controls, showTop=True)
+        self.tree.move(0, 0)
 
-    #     self.tree = ParameterTree(showHeader=False)
-    #     self.tree.setParameters(self.plot_controls, showTop=True)
+    def change_plot_title(self, param):
+        """
+        event handler for a change in plot title
+        """
+        param.parent().setOpts(title=param.value())
+        # TODO add  title on plot
 
-    # def add_new_plot_grp(self, parent):
-    #     """
-    #     add the controls for a new plot to the side bar
-    #     """
-    #     new_title = f"Plot {len(parent.childs)}"
-    #     grp_params = plot2d_control_grp.copy()
-    #     grp_params["title"] = new_title
-    #     grp_params["children"][0]["value"] = new_title
-    #     # probe selection drop down should show probe_title but return probe_name
-    #     # probe_title can be changed probe_name can't
-    #     limits = {value.title: key for key, value in self.machine.probes.items()}
-    #     grp_params["children"][1]["limits"] = limits
-    #     new_grp = parent.addChild(grp_params, autoIncrementName=True)
-    #     new_grp.child("plot_title").sigValueChanged.connect(self.change_plot_title)
+    def change_magnification(self, control):
+        """
+        event handler for a change in magnification
+        """
+        self.magnification = control.value()
+        self.replot()
 
-    # def change_artefact(self, param):
-    #     """
-    #     event handler for a change in artefact
-    #     """
-    #     self.artefact = param.value()
-    #     self.update_plot()
+    def replot(self):
+        """
+        redraw existing plots and add new ones from data in self.machine.measurements
+        """
+        # this may cause event loop use blocker?
+        # limits = {value.title: key for key, value in self.machine.measurements.items()}
+        # self.mmts_to_plot.setLimits(limits)
 
-    # def change_plot_title(self, param):
-    #     """
-    #     event handler for a change in plot title
-    #     """
-    #     param.parent().setOpts(title=param.value())
+        for mmt_name in self.mmts_to_plot.value():
+            if mmt_name not in self.plot_data:
+                # need a new plot
+                self.plot_data[mmt_name] = plot_ballplate(self.plot_widget)
 
-    # def change_dock_title(self, param):
-    #     """
-    #     event handler for a change in dock title
-    #     """
-    #     param.parent().setOpts(title=param.value())
-    #     self.setTitle(param.value())
-
-    # def change_magnification(self, control):
-    #     """
-    #     event handler for a change in magnification
-    #     """
-    #     self.magnification = control.value()
-    #     self.update_plot()
-
-    # def update_plot(self):
-    #     """
-    #     updates the 2d plot with new model parameters from MainWindow model sliders
-    #     """
-
-    #     self.plot_data_from_controls()
-    #     pars = list(self.machine.model_params.values())
-    #     for plot in self.plot_data.values():
-    #         # convert to parameters required by modelled_mmts_XYZ
-    #         RP = plot.transform3d.matrix()
-    #         xt, yt, zt = plot.probe_vec.x(), plot.probe_vec.y(), plot.probe_vec.z()
-    #         dxy = design.modelled_mmts_XYZ(
-    #             RP,
-    #             xt,
-    #             yt,
-    #             zt,
-    #             pars,
-    #             ballspacing=self.artefact["ball_spacing"],
-    #             nballs=self.artefact["nballs"],
-    #         )
-    #         data = single_grid_plot_data(
-    #             dxy,
-    #             self.magnification,
-    #             ballspacing=self.artefact["ball_spacing"],
-    #             nballs=self.artefact["nballs"],
-    #         )
-    #         for datum, plot in zip(data, plot.lineplots):
-    #             plot.setData(x=datum[0], y=datum[1])
-
-    # def plot_data_from_controls(self):
-    #     """
-    #     create the self.plot_data dict of PlotData classes from current gui settings
-    #     """
-    #     for plot_child in self.plot_controls.child("plots_grp").children():
-    #         name = plot_child.name()
-    #         title = plot_child.title()
-    #         # if an entry doesn't exist create a default one
-    #         if name not in self.plot_data:
-    #             self.plot_data[name] = PlotData2d()
-    #             self.plot_data[name].lineplots = plot_ballplate(self.plot_widget)
-    #         self.plot_data[name].title = title
-
-    #         grp_loc = plot_child.child("grp_position")
-    #         grp_rot = plot_child.child("grp_rotation")
-    #         probe_name = plot_child.child("probe").value()
-
-    #         vloc = [grand_kid.value() for grand_kid in grp_loc]
-    #         vrot = [grand_kid.value() for grand_kid in grp_rot]
-    #         self.plot_data[name].transform3d = vec_to_transform3d(vloc, vrot)
-
-    #         if probe_name:
-    #             probe = self.machine.probes[probe_name]
-    #             self.plot_data[name].probe_vec = probe.length
-    #         else:
-    #             self.plot_data[name].probe_vec = qtg.QVector3D()
-
-    # def update_probes(self):
-    #     """
-    #     called in response to any changes to probes in MainWindow
-    #     """
-
-    #     # update the displayed list of probes for each plot control
-
-    #     # probe selection drop down should show probe_title but return probe_name
-    #     # probe_title can be changed probe_name can't
-    #     limits = {value.title: key for key, value in self.machine.probes.items()}
-    #     for plot_child in self.plot_controls.child("plots_grp").children():
-    #         probe = plot_child.child("probe")
-    #         probe.setLimits(limits)
-
-    #     # update the plots in case the probe lengths changed
-    #     self.update_plot()
+            # convert measurement data to data needed to update PlotDataItems
+            mmt = self.machine.measurements[mmt_name]
+            dxy = mmt.data
+            ballspacing = mmt.artefact.ball_spacing
+            nballs = mmt.artefact.nballs
+            data = single_grid_plot_data(
+                dxy,
+                self.magnification,
+                ballspacing=ballspacing,
+                nballs=nballs,
+            )
+            # update PlotDataItems with new data
+            for datum, plot in zip(data, self.plot_data[mmt_name]):
+                plot.setData(x=datum[0], y=datum[1])
 
 
 def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
     """
     takes the vectors from the gui elements (rot in degrees) and
     returns the corresponding Transform3D object
-    sets the (euler) angles in order xyz and uses multiplication order to match the
+    sets the (euler) angles in order xyz to match the
     Blender mathutils Euler.to_matrix method
     """
-    rx = pg.Transform3D()
-    rx.rotate(vrot[0], 1.0, 0.0, 0.0)
-    ry = pg.Transform3D()
-    ry.rotate(vrot[1], 0.0, 1.0, 0.0)
-    rz = pg.Transform3D()
-    rz.rotate(vrot[2], 0.0, 0.0, 1.0)
-    txyz = pg.Transform3D()
-    txyz.translate(*vloc)
-    mat = pg.Transform3D(txyz * rz * ry * rx)
+    mat = pg.Transform3D()
+    mat.translate(*vloc)
+    mat.rotate(vrot[2], 0.0, 0.0, 1.0)
+    mat.rotate(vrot[1], 0.0, 1.0, 0.0)
+    mat.rotate(vrot[0], 1.0, 0.0, 0.0)
     return mat
