@@ -69,14 +69,8 @@ class Machine:
 
 # defaults
 
-# pmm_866_type = MachineType(
-#     title="PMM866",
-#     size=(800, 600, 600),
-#     fixed_table=False,
-#     bridge_axis=1,
-# )
 
-koba_620_type = ArtefactType(
+koba_620 = ArtefactType(
     title="KOBA 0620",
     nballs=(5, 5),
     ball_spacing=133.0,
