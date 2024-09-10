@@ -39,10 +39,12 @@ class MainWindow(qtw.QMainWindow):
         self.summary = qtw.QTextEdit()
         self.slider_group = self.make_model_sliders()
         self.probes_group = self.make_probe_controls()
+        self.mmt_group = self.make_measurement_controls()
 
         self.control_group = Parameter.create(type="group", name="main_controls")
 
         self.control_group.addChild(self.slider_group)
+        self.control_group.addChild(self.mmt_group)
         self.control_group.addChild(self.probes_group)
 
         # other controls
@@ -77,7 +79,7 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
-    def make_model_sliders(self) -> (Parameter, ParameterTree):
+    def make_model_sliders(self) -> Parameter:
         # create sliders
         slider_group = Parameter.create(
             type="group", title="Linear Model", name="linear_model"
@@ -113,16 +115,19 @@ class MainWindow(qtw.QMainWindow):
             dict(type="action", name="btn_reset_all", title="Reset All")
         )
 
-        slider_group.sigTreeStateChanged.connect(self.update_model)
+        # slider_group.sigTreeStateChanged.connect(self.update_model)
 
         return slider_group
 
-    def make_probe_controls(self):
+    def make_probe_controls(self) -> Parameter:
         """
         make control group for probes
         """
         probes_group = Parameter.create(
-            type="group", title="Probes", name="probes_group", addText="Add Probe"
+            type="group",
+            title="Probes",
+            name="probes_group",
+            addText="Add Probe",
         )
         self.add_new_probe_group(probes_group)
         self.add_new_probe_group(probes_group)
@@ -140,41 +145,76 @@ class MainWindow(qtw.QMainWindow):
         grp_params["title"] = new_title
         grp_params["children"][0]["value"] = new_title
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
-        new_grp.child("probe_name").sigValueChanged.connect(self.change_probe_name)
-
-    def change_probe_name(self, param):
-        """
-        event handler for a change in probe name
-        """
-        param.parent().setOpts(title=param.value())
+        new_grp.child("probe_name").sigValueChanged.connect(self.change_param_title)
 
     def update_probes(self):
         """
-        create self.probes_dict from self.probes_group
+        recreates self.machine.probes from gui controls in self.probes_group
         call update_probes method of all docks
         """
-        self.probe_data = {}
         self.machine.probes = {}
         for probe_child in self.probes_group.children():
             probe_name = probe_child.name()
             grp_probe = probe_child.child("grp_probe_lengths")
             vprobe = [grand_kid.value() for grand_kid in grp_probe]
             probe_vec = qtg.QVector3D(*vprobe)
-            # self.probe_data[probe_name] = {
-            #     "probe_title": probe_child.title(),
-            #     "probe_vec": probe_vec,
-            # }
             probe = dc.Probe(title=probe_child.title(), length=probe_vec)
             self.machine.probes[probe_name] = probe
-        try:
-            self.plot3d_dock.update_probes()
-        except AttributeError:
-            # plot not created yet
-            pass
-        for dock in self.plot2d_docks:
-            dock.update_probes()
-            for plot in dock.plot_data.values():
-                self.plot3d_dock.plot_ball_plate(dock.artefact, plot)
+
+    def make_measurement_controls(self) -> Parameter:
+        mmt_group = Parameter.create(
+            type="group",
+            title="Measurements",
+            name="mmt_group",
+            addText="Add Measurement",
+        )
+        self.add_new_mmt_group(mmt_group)
+        mmt_group.sigAddNew.connect(self.add_new_mmt_group)
+        return mmt_group
+
+    def add_new_mmt_group(self, parent):
+        """
+        add the controls for a new artefact measurement to the side bar
+        """
+        new_title = f"Measurement{len(parent.childs)}"
+        grp_params = gc.mmt_control_grp.copy()
+        # grp_params["title"] = new_title
+        # grp_params["children"][0]["value"] = new_title
+
+        new_grp = parent.addChild(grp_params, autoIncrementName=True)
+        new_grp.setOpts(title=new_title)
+        new_grp.child("mmt_title").setValue(new_title)
+        new_grp.child("artefact").setLimits(dc.default_artefacts.keys())
+        new_grp.child("probe").setLimits(self.machine.probes.keys())
+        new_grp.child("mmt_title").sigValueChanged.connect(self.change_param_title)
+
+    def change_param_title(self, param):
+        """
+        event handler for a change in probe name
+        """
+        param.parent().setOpts(title=param.value())
+
+    def update_measurements(self):
+        """
+        recreates self.machine.measurements from gui controls in self.mmt_group
+        recalculates all measurement data - optimize later if needed
+        """
+        self.machine.measurements = {}
+        for mmt_child in self.mmt_group.children():
+            mmt_name = mmt_child.name()
+            artefact = dc.default_artefacts[mmt_child.child("artefact").value()]
+
+            grp_loc = mmt_child.child("grp_location")
+            vloc = [grand_kid.value() for grand_kid in grp_loc]
+            grp_rot = mmt_child.child("grp_rotation")
+            vrot = [grand_kid.value() for grand_kid in grp_rot]
+            transform3d = gc.vec_to_transform3d(vloc, vrot)
+
+            probe = self.machine.probes[mmt_child.child("probe").value()]
+            mmt = dc.Measurement(
+                artefact=artefact, transform3d=transform3d, probe=probe, data=None
+            )
+            self.machine.mesurements[mmt_name] = mmt
 
     def add_startup_docks(self):
         """
@@ -182,7 +222,6 @@ class MainWindow(qtw.QMainWindow):
         """
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
-        self.update_probes()
 
     def update_model(self, group, changes):
         """
@@ -200,14 +239,6 @@ class MainWindow(qtw.QMainWindow):
                 for axis_group in self.slider_group.child("linear_model").children():
                     for child in axis_group.children():
                         child.setValue(0.0)
-        try:
-            self.plot3d_dock.update_plot()
-        except AttributeError:
-            # plot not created yet
-            print("no 3d plot yet")
-            pass
-        for dock in self.plot2d_docks:
-            dock.update_plot()
 
     def add_new_plot2d_dock(self):
         """
@@ -219,7 +250,14 @@ class MainWindow(qtw.QMainWindow):
         new_plot_dock.update_gui.connect(self.gui_update_request)
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
-        self.update_probes()
+
+    def recalculate(self):
+        self.machine.recalculate()
+
+    def replot(self):
+        self.plot3d_dock.replot()
+        for dock in self.plot2d_docks:
+            dock.replot()
 
     def gui_update_request(self, arg):
         print("received a gui update request")

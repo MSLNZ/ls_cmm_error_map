@@ -58,6 +58,25 @@ class Measurement:
     probe: Probe
     data: np.ndarray
 
+    def recalculate(self, model_params):
+        """
+        update data with new model_parameters
+        """
+        pars = list(model_params.values())
+
+        RP = self.transform3d.matrix()
+        xt, yt, zt = self.probe.length.x(), self.probe.length.y(), self.probe.length.z()
+
+        self.data = design.modelled_mmts_XYZ(
+            RP,
+            xt,
+            yt,
+            zt,
+            pars,
+            ballspacing=self.artefact.ball_spacing,
+            nballs=self.artefact.nballs,
+        )
+
 
 @dataclass
 class Machine:
@@ -66,21 +85,35 @@ class Machine:
     probes: dict[str, Probe]
     model_params: dict[str, float]
 
+    def recalculate(self):
+        """
+        update all measurement data
+        """
+        for mmt in self.measurements.values():
+            mmt.recalculate(self.model_params)
+
 
 # defaults
 
-# pmm_866_type = MachineType(
-#     title="PMM866",
-#     size=(800, 600, 600),
-#     fixed_table=False,
-#     bridge_axis=1,
-# )
 
-koba_620_type = ArtefactType(
-    title="KOBA 0620",
-    nballs=(5, 5),
-    ball_spacing=133.0,
-)
+default_artefacts = {
+    "KOBA 0620": ArtefactType(
+        title="KOBA 0620",
+        nballs=(5, 5),
+        ball_spacing=133.0,
+    ),
+    "KOBA 0420": ArtefactType(
+        title="KOBA 0420",
+        nballs=(5, 5),
+        ball_spacing=83.0,
+    ),
+    "KOBA 0320": ArtefactType(
+        title="KOBA 0320",
+        nballs=(5, 5),
+        ball_spacing=60.0,
+    ),
+}
+
 
 pmm_866 = Machine(
     cmm_model=MachineType(
