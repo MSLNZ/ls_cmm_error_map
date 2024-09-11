@@ -112,12 +112,29 @@ class MainWindow(qtw.QMainWindow):
             )
 
         slider_group.addChild(
-            dict(type="action", name="btn_reset_all", title="Reset All")
+            dict(type="action", name="btn_reset_all", title="Reset Model")
         )
 
-        # slider_group.sigTreeStateChanged.connect(self.update_model)
-
+        slider_group.sigTreeStateChanged.connect(self.update_model)
         return slider_group
+
+    def update_model(self, group, changes):
+        """
+        event callback for sliders
+        """
+        control_name = changes[0][0].name()
+        slider_value = changes[0][2]
+        if control_name in design.model_parameters_dict.keys():
+            slider_factor = gc.slider_factors[control_name]
+            self.machine.model_params[control_name] = slider_value * slider_factor
+        elif control_name == "btn_reset_all":
+            self.machine.model_params = design.model_parameters_dict.copy()
+            # update sliders
+            with self.slider_group.treeChangeBlocker():
+                for axis_group in self.slider_group.child("linear_model").children():
+                    for child in axis_group.children():
+                        child.setValue(0.0)
+        self.replot()
 
     def make_probe_controls(self) -> Parameter:
         """
@@ -160,6 +177,7 @@ class MainWindow(qtw.QMainWindow):
             probe_vec = qtg.QVector3D(*vprobe)
             probe = dc.Probe(title=probe_child.title(), length=probe_vec)
             self.machine.probes[probe_name] = probe
+        self.replot()
 
     def make_measurement_controls(self) -> Parameter:
         mmt_group = Parameter.create(
@@ -170,6 +188,7 @@ class MainWindow(qtw.QMainWindow):
         )
         self.add_new_mmt_group(mmt_group)
         mmt_group.sigAddNew.connect(self.add_new_mmt_group)
+        mmt_group.sigTreeStateChanged.connect(self.update_measurements)
         return mmt_group
 
     def add_new_mmt_group(self, parent):
@@ -178,8 +197,6 @@ class MainWindow(qtw.QMainWindow):
         """
         new_title = f"Measurement{len(parent.childs)}"
         grp_params = gc.mmt_control_grp.copy()
-        # grp_params["title"] = new_title
-        # grp_params["children"][0]["value"] = new_title
 
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.setOpts(title=new_title)
@@ -188,16 +205,10 @@ class MainWindow(qtw.QMainWindow):
         new_grp.child("probe").setLimits(self.machine.probes.keys())
         new_grp.child("mmt_title").sigValueChanged.connect(self.change_param_title)
 
-    def change_param_title(self, param):
-        """
-        event handler for a change in probe name
-        """
-        param.parent().setOpts(title=param.value())
-
     def update_measurements(self):
         """
         recreates self.machine.measurements from gui controls in self.mmt_group
-        recalculates all measurement data - optimize later if needed
+        recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
         self.machine.measurements = {}
         for mmt_child in self.mmt_group.children():
@@ -219,6 +230,13 @@ class MainWindow(qtw.QMainWindow):
                 data=None,
             )
             self.machine.mesurements[mmt_name] = mmt
+        self.replot()
+
+    def change_param_title(self, param):
+        """
+        event handler for a change in probe name
+        """
+        param.parent().setOpts(title=param.value())
 
     def add_startup_docks(self):
         """
@@ -226,23 +244,6 @@ class MainWindow(qtw.QMainWindow):
         """
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
-
-    def update_model(self, group, changes):
-        """
-        event callback for sliders
-        """
-        control_name = changes[0][0].name()
-        slider_value = changes[0][2]
-        if control_name in design.model_parameters_dict.keys():
-            slider_factor = gc.slider_factors[control_name]
-            self.machine.model_params[control_name] = slider_value * slider_factor
-        elif control_name == "btn_reset_all":
-            self.machine.model_params = design.model_parameters_dict.copy()
-            # update sliders
-            with self.slider_group.treeChangeBlocker():
-                for axis_group in self.slider_group.child("linear_model").children():
-                    for child in axis_group.children():
-                        child.setValue(0.0)
 
     def add_new_plot2d_dock(self):
         """
@@ -259,7 +260,9 @@ class MainWindow(qtw.QMainWindow):
         self.machine.recalculate()
 
     def replot(self):
-        self.plot3d_dock.replot()
+        self.recalculate()
+        if self.plot3d_dock:
+            self.plot3d_dock.replot()
         for dock in self.plot2d_docks:
             dock.replot()
 

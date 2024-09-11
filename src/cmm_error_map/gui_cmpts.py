@@ -43,48 +43,6 @@ slider_factors = {
 x = np.array([1, 2, 5, 7.5])
 magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 
-default_artefacts = {
-    "KOBA 0620": {"ball_spacing": 133, "nballs": (5, 5), "title": "KOBA 0620"},
-    "KOBA 0420": {"ball_spacing": 83, "nballs": (5, 5), "title": "KOBA 0420"},
-    "KOBA 0320": {"ball_spacing": 60, "nballs": (5, 5), "title": "KOBA 0320"},
-}
-
-
-# @dataclass
-# class PlotData2d:
-#     """
-#     plot data for a 2d artefact
-#     """
-
-#     plot: pg.PlotWidget = None
-#     lineplots: list = field(default_factory=list[pg.PlotDataItem])
-
-
-@dataclass
-class PlotData3d:
-    """
-    plot data for a 3d machine deformation
-    """
-
-    probe_title: str = "probe 0"
-    probe_vec: qtg.QVector3D = None
-    plot: gl.GLViewWidget = None
-    lineplots: list = field(default_factory=list[gl.GLLinePlotItem])
-
-
-@dataclass
-class ArtefactData3d:
-    """
-    data to plot a ballplate on 3d plot
-    """
-
-    title: str = ""
-    ball_spacing: float = (133,)
-    nballs: tuple[2] = (5, 5)
-    grid: gl.GLGridItem = None
-    points: gl.GLScatterPlotItem = None
-
-
 # MARK: 3D plots
 
 
@@ -233,12 +191,6 @@ probe_control_grp = {
             "title": "Probe Name",
             "type": "str",
             "value": "Probe 0",
-        },
-        {
-            "name": "is_plotted",
-            "title": "Plot in 3D",
-            "type": "bool",
-            "value": True,
         },
         grp_probe_lengths,
     ],
