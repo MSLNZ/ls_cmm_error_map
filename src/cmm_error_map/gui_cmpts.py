@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+# from dataclasses import dataclass, field
 
 import numpy as np
 import pyqtgraph as pg
@@ -8,8 +8,8 @@ import pyqtgraph.opengl as gl
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-# from pyqtgraph.Qt.QtCore import Qt as qtc
-import pyqtgraph.Qt.QtGui as qtg
+from pyqtgraph.Qt.QtCore import Qt as qtc
+# import pyqtgraph.Qt.QtGui as qtg
 
 from PySide6.QtCore import Signal
 
@@ -143,7 +143,7 @@ def update_plot_model3d(
 
 dock3d_control_grp = {
     "name": "dock3d_control_grp",
-    "title": "3D Plot",
+    "title": "▼",
     "type": "group",
     "children": [
         {
@@ -182,12 +182,12 @@ grp_probe_lengths = {
 
 probe_control_grp = {
     "title": "Probe 0",
-    "name": "probe",
+    "name": "prb_control_grp0",
     "type": "group",
     "expanded": False,
     "children": [
         {
-            "name": "probe_name",
+            "name": "prb_title",
             "title": "Probe Name",
             "type": "str",
             "value": "Probe 0",
@@ -220,7 +220,7 @@ grp_rotation = {
 }
 
 mmt_control_grp = {
-    "name": "mmt_control_grp",
+    "name": "mmt_control_grp0",
     "title": "New Measurement",
     "type": "group",
     "children": [
@@ -293,7 +293,13 @@ class Plot3dDock(Dock):
         self.probe_box.sigValueChanged.connect(self.replot)
 
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
-        self.tree.setParameters(self.plot_controls, showTop=False)
+        self.tree.setParameters(self.plot_controls, showTop=True)
+        self.tree.setStyleSheet(
+            "background:transparent;" "border-width: 0px; border-style: solid"
+        )
+        self.tree.setFixedWidth(500)
+        self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
+        self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
 
     # def plot_ball_plate(self, artefact: dict, plot_data_2d: PlotData2d):
@@ -343,6 +349,7 @@ class Plot3dDock(Dock):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
         """
+        print("replot 3d")
         probe_box_name = self.probe_box.value()
         vprobe = self.machine.probes[probe_box_name].length
         xt, yt, zt = vprobe.x(), vprobe.y(), vprobe.z()
@@ -366,10 +373,10 @@ class Plot3dDock(Dock):
 
 
 dock2d_control_grp = {
-    "title": "Contols",
+    "title": "▼",
     "name": "plot_controls",
     "type": "group",
-    "expanded": False,
+    "expanded": True,
     "children": [
         {
             "name": "plot_title",
@@ -568,6 +575,12 @@ class Plot2dDock(Dock):
 
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
+        self.tree.setStyleSheet(
+            "background:transparent;" "border-width: 0px; border-style: solid"
+        )
+        self.tree.setFixedWidth(500)
+        self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
+        self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
 
     def change_plot_title(self, param):
@@ -584,7 +597,7 @@ class Plot2dDock(Dock):
         self.magnification = control.value()
         self.replot()
 
-    def replot(self):
+    def replot(self, control=None):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
@@ -592,25 +605,38 @@ class Plot2dDock(Dock):
         # limits = {value.title: key for key, value in self.machine.measurements.items()}
         # self.mmts_to_plot.setLimits(limits)
 
-        for mmt_name in self.mmts_to_plot.value():
-            if mmt_name not in self.plot_data:
-                # need a new plot
-                self.plot_data[mmt_name] = plot_ballplate(self.plot_widget)
+        # print("2d dock replot")
+        # print(f"{len(self.mmts_to_plot.value())=}")
+        # print(f"{self.mmts_to_plot.value()=}")
+        # print(f"{self.mmts_to_plot.opts['limits']=}")
 
-            # convert measurement data to data needed to update PlotDataItems
-            mmt = self.machine.measurements[mmt_name]
-            dxy = mmt.data
-            ballspacing = mmt.artefact.ball_spacing
-            nballs = mmt.artefact.nballs
-            data = single_grid_plot_data(
-                dxy,
-                self.magnification,
-                ballspacing=ballspacing,
-                nballs=nballs,
-            )
-            # update PlotDataItems with new data
-            for datum, plot in zip(data, self.plot_data[mmt_name]):
-                plot.setData(x=datum[0], y=datum[1])
+        for mmt_name in self.machine.measurements:
+            if mmt_name not in self.mmts_to_plot.value() and mmt_name in self.plot_data:
+                # remove plotlines
+                for plot in self.plot_data[mmt_name]:
+                    self.plot_widget.removeItem(plot)
+                del self.plot_data[mmt_name]
+
+            if mmt_name in self.mmts_to_plot.value():
+                if mmt_name not in self.plot_data:
+                    # need a new plot
+                    self.plot_data[mmt_name] = plot_ballplate(self.plot_widget)
+
+                # update plot
+                # convert measurement data to data needed to update PlotDataItems
+                mmt = self.machine.measurements[mmt_name]
+                dxy = mmt.data
+                ballspacing = mmt.artefact.ball_spacing
+                nballs = mmt.artefact.nballs
+                data = single_grid_plot_data(
+                    dxy,
+                    self.magnification,
+                    ballspacing=ballspacing,
+                    nballs=nballs,
+                )
+                # update PlotDataItems with new data
+                for datum, plot in zip(data, self.plot_data[mmt_name]):
+                    plot.setData(x=datum[0], y=datum[1])
 
 
 def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:

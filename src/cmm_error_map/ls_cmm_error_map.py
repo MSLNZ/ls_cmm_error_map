@@ -38,8 +38,8 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
         self.slider_group = self.make_model_sliders()
-        self.probes_group = self.make_probe_controls()
-        self.mmt_group = self.make_measurement_controls()
+        self.make_probe_controls()
+        self.make_measurement_controls()
 
         self.control_group = Parameter.create(type="group", name="main_controls")
 
@@ -140,18 +140,17 @@ class MainWindow(qtw.QMainWindow):
         """
         make control group for probes
         """
-        probes_group = Parameter.create(
+        self.probes_group = Parameter.create(
             type="group",
             title="Probes",
             name="probes_group",
             addText="Add Probe",
         )
-        self.add_new_probe_group(probes_group)
-        self.add_new_probe_group(probes_group)
-        probes_group.sigAddNew.connect(self.add_new_probe_group)
-        probes_group.sigTreeStateChanged.connect(self.update_probes)
-
-        return probes_group
+        self.add_new_probe_group(self.probes_group)
+        self.add_new_probe_group(self.probes_group)
+        self.update_probes()
+        self.probes_group.sigAddNew.connect(self.add_new_probe_group)
+        self.probes_group.sigTreeStateChanged.connect(self.update_probes)
 
     def add_new_probe_group(self, parent):
         """
@@ -159,10 +158,9 @@ class MainWindow(qtw.QMainWindow):
         """
         new_title = f"Probe {len(parent.childs)}"
         grp_params = gc.probe_control_grp.copy()
-        grp_params["title"] = new_title
-        grp_params["children"][0]["value"] = new_title
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
-        new_grp.child("probe_name").sigValueChanged.connect(self.change_param_title)
+        new_grp.child("prb_title").sigValueChanged.connect(self.change_prb_title)
+        new_grp.child("prb_title").setValue(new_title)
 
     def update_probes(self):
         """
@@ -180,16 +178,15 @@ class MainWindow(qtw.QMainWindow):
         self.replot()
 
     def make_measurement_controls(self) -> Parameter:
-        mmt_group = Parameter.create(
+        self.mmt_group = Parameter.create(
             type="group",
             title="Measurements",
             name="mmt_group",
             addText="Add Measurement",
         )
-        self.add_new_mmt_group(mmt_group)
-        mmt_group.sigAddNew.connect(self.add_new_mmt_group)
-        mmt_group.sigTreeStateChanged.connect(self.update_measurements)
-        return mmt_group
+        self.add_new_mmt_group(self.mmt_group)
+        self.mmt_group.sigAddNew.connect(self.add_new_mmt_group)
+        self.mmt_group.sigTreeStateChanged.connect(self.update_measurements)
 
     def add_new_mmt_group(self, parent):
         """
@@ -198,12 +195,26 @@ class MainWindow(qtw.QMainWindow):
         new_title = f"Measurement{len(parent.childs)}"
         grp_params = gc.mmt_control_grp.copy()
 
-        new_grp = parent.addChild(grp_params, autoIncrementName=True)
-        new_grp.setOpts(title=new_title)
-        new_grp.child("mmt_title").setValue(new_title)
-        new_grp.child("artefact").setLimits(dc.default_artefacts.keys())
-        new_grp.child("probe").setLimits(self.machine.probes.keys())
-        new_grp.child("mmt_title").sigValueChanged.connect(self.change_param_title)
+        with self.mmt_group.treeChangeBlocker():
+            new_grp = parent.addChild(grp_params, autoIncrementName=True)
+            new_grp.setOpts(title=new_title)
+            new_grp.child("mmt_title").setValue(new_title)
+            new_grp.child("artefact").setLimits(list(dc.default_artefacts.keys()))
+            new_grp.child("artefact").setValue(list(dc.default_artefacts.keys())[0])
+            prb_limits = {
+                value.title: key for key, value in self.machine.probes.items()
+            }
+            new_grp.child("probe").setLimits(prb_limits)
+            new_grp.child("probe").setValue(list(prb_limits.values())[0])
+            new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
+
+        self.update_measurements()
+        mmt_choices = {
+            value.title: key for key, value in self.machine.measurements.items()
+        }
+        # if self.plot3d_dock:
+        #     self.plot3d_dock.mmts_to_plot.setLimits(mmt_choices)
+        #     # TODO also 2ddocks
 
     def update_measurements(self):
         """
@@ -211,6 +222,7 @@ class MainWindow(qtw.QMainWindow):
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
         self.machine.measurements = {}
+
         for mmt_child in self.mmt_group.children():
             mmt_name = mmt_child.name()
             artefact = dc.default_artefacts[mmt_child.child("artefact").value()]
@@ -229,14 +241,41 @@ class MainWindow(qtw.QMainWindow):
                 probe=probe,
                 data=None,
             )
-            self.machine.mesurements[mmt_name] = mmt
+            self.machine.measurements[mmt_name] = mmt
         self.replot()
 
-    def change_param_title(self, param):
+    def change_prb_title(self, param):
         """
         event handler for a change in probe name
         """
         param.parent().setOpts(title=param.value())
+        try:
+            self.update_measurements()
+            # update probe titles in measurement lists
+            for mmt_child in self.mmt_group.children():
+                prb_limits = {
+                    value.title: key for key, value in self.machine.probes.items()
+                }
+                mmt_child.child("probe").setLimits(prb_limits)
+            # update probe titles in 3d dock list
+            self.plot3d_dock.probe_box.setLimits(prb_limits)
+
+        except AttributeError:
+            # no mmt group yet
+            pass
+
+    def change_mmt_title(self, param):
+        """
+        event handler for a change in probe name
+        """
+        param.parent().setOpts(title=param.value())
+        self.update_measurements()
+        mmt_choices = {
+            value.title: key for key, value in self.machine.measurements.items()
+        }
+        # self.plot3d_dock.mmts_to_plot.setLimits(mmt_choices)
+        # for dock in self.plot2d_docks:
+        #     dock.mmts_to_plot.setLimits(mmt_choices)
 
     def add_startup_docks(self):
         """
@@ -255,6 +294,7 @@ class MainWindow(qtw.QMainWindow):
         new_plot_dock.update_gui.connect(self.gui_update_request)
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
+        new_plot_dock.replot()
 
     def recalculate(self):
         self.machine.recalculate()
