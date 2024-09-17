@@ -254,11 +254,11 @@ class Plot3dDock(Dock):
     knows how to draw and update itself based on the values in parameter tree
     """
 
-    def __init__(self, name, machine):
+    def __init__(self, name: str, machine: dc.Machine):
         super(Plot3dDock, self).__init__(name)
 
         self.magnification = 5000
-        self.machine: dc.Machine = machine
+        self.machine = machine
 
         self.plot_data: dict[str, list[gl.GLLinePlotItem]] = {}
         self.box_lineplots: list[gl.GLLinePlotItem] = []
@@ -281,10 +281,10 @@ class Plot3dDock(Dock):
         slider_mag.sigValueChanged.connect(self.change_magnification)
 
         self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
-        mmt_choices = {
-            value.title: key for key, value in self.machine.measurements.items()
-        }
-        self.mmts_to_plot.setLimits(mmt_choices)
+        # checklist limits need to be lists and display current title
+        limits = [value.title for value in self.machine.measurements.values()]
+        self.mmts_to_plot.setLimits(limits)
+
         self.mmts_to_plot.sigValueChanged.connect(self.replot)
 
         self.probe_box = self.plot_controls.child("probe_box")
@@ -345,11 +345,17 @@ class Plot3dDock(Dock):
         self.magnification = control.value()
         self.replot()
 
+    def update_measurement_list(self):
+        """
+        update the displayed measurement list to match self.machine
+        """
+        limits = [value.title for value in self.machine.measurements.values()]
+        self.mmts_to_plot.setLimits(limits)
+
     def replot(self):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
         """
-        print("replot 3d")
         probe_box_name = self.probe_box.value()
         vprobe = self.machine.probes[probe_box_name].length
         xt, yt, zt = vprobe.x(), vprobe.y(), vprobe.z()
@@ -569,7 +575,8 @@ class Plot2dDock(Dock):
         slider_mag.sigValueChanged.connect(self.change_magnification)
 
         self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
-        limits = {value.title: key for key, value in self.machine.measurements.items()}
+        # checklist limits need to be lists and display current title
+        limits = [value.title for value in self.machine.measurements.values()]
         self.mmts_to_plot.setLimits(limits)
         self.mmts_to_plot.sigValueChanged.connect(self.replot)
 
@@ -582,6 +589,13 @@ class Plot2dDock(Dock):
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
+
+    def update_measurement_list(self):
+        """
+        update the displayed measurement list to match self.machine
+        """
+        limits = [value.title for value in self.machine.measurements.values()]
+        self.mmts_to_plot.setLimits(limits)
 
     def change_plot_title(self, param):
         """
@@ -601,23 +615,16 @@ class Plot2dDock(Dock):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
-        # this may cause event loop use blocker?
-        # limits = {value.title: key for key, value in self.machine.measurements.items()}
-        # self.mmts_to_plot.setLimits(limits)
 
-        # print("2d dock replot")
-        # print(f"{len(self.mmts_to_plot.value())=}")
-        # print(f"{self.mmts_to_plot.value()=}")
-        # print(f"{self.mmts_to_plot.opts['limits']=}")
-
-        for mmt_name in self.machine.measurements:
-            if mmt_name not in self.mmts_to_plot.value() and mmt_name in self.plot_data:
+        for mmt_name, mmt in self.machine.measurements.items():
+            to_plot = mmt.title in self.mmts_to_plot.value()
+            if not to_plot and mmt_name in self.plot_data:
                 # remove plotlines
                 for plot in self.plot_data[mmt_name]:
                     self.plot_widget.removeItem(plot)
                 del self.plot_data[mmt_name]
 
-            if mmt_name in self.mmts_to_plot.value():
+            if to_plot:
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot_ballplate(self.plot_widget)

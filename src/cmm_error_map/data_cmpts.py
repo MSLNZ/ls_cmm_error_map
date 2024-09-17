@@ -48,12 +48,14 @@ class ArtefactType:
 @dataclass
 class Probe:
     title: str
+    name: str
     length: qtg.QVector3D
 
 
 @dataclass
 class Measurement:
     title: str
+    name: str
     artefact: ArtefactType
     transform3d: pg.Transform3D
     probe: Probe

@@ -37,7 +37,7 @@ class MainWindow(qtw.QMainWindow):
     def setup_gui(self):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
-        self.slider_group = self.make_model_sliders()
+        self.make_model_sliders()
         self.make_probe_controls()
         self.make_measurement_controls()
 
@@ -45,7 +45,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.control_group.addChild(self.slider_group)
         self.control_group.addChild(self.mmt_group)
-        self.control_group.addChild(self.probes_group)
+        self.control_group.addChild(self.prb_group)
 
         # other controls
         btn_plot = self.control_group.addChild(
@@ -81,19 +81,19 @@ class MainWindow(qtw.QMainWindow):
 
     def make_model_sliders(self) -> Parameter:
         # create sliders
-        slider_group = Parameter.create(
+        self.slider_group = Parameter.create(
             type="group", title="Linear Model", name="linear_model"
         )
-        x_axis = slider_group.addChild(
+        x_axis = self.slider_group.addChild(
             dict(type="group", name="X axis", expanded=False)
         )
-        y_axis = slider_group.addChild(
+        y_axis = self.slider_group.addChild(
             dict(type="group", name="Y axis", expanded=False)
         )
-        z_axis = slider_group.addChild(
+        z_axis = self.slider_group.addChild(
             dict(type="group", name="Z axis", expanded=False)
         )
-        squareness = slider_group.addChild(
+        squareness = self.slider_group.addChild(
             dict(type="group", name="Squareness", expanded=False)
         )
         axes = [x_axis, y_axis, z_axis, squareness]
@@ -111,12 +111,11 @@ class MainWindow(qtw.QMainWindow):
                 )
             )
 
-        slider_group.addChild(
+        self.slider_group.addChild(
             dict(type="action", name="btn_reset_all", title="Reset Model")
         )
 
-        slider_group.sigTreeStateChanged.connect(self.update_model)
-        return slider_group
+        self.slider_group.sigTreeStateChanged.connect(self.update_model)
 
     def update_model(self, group, changes):
         """
@@ -140,17 +139,17 @@ class MainWindow(qtw.QMainWindow):
         """
         make control group for probes
         """
-        self.probes_group = Parameter.create(
+        self.prb_group = Parameter.create(
             type="group",
             title="Probes",
             name="probes_group",
             addText="Add Probe",
         )
-        self.add_new_probe_group(self.probes_group)
-        self.add_new_probe_group(self.probes_group)
+        self.add_new_probe_group(self.prb_group)
+        self.add_new_probe_group(self.prb_group)
         self.update_probes()
-        self.probes_group.sigAddNew.connect(self.add_new_probe_group)
-        self.probes_group.sigTreeStateChanged.connect(self.update_probes)
+        self.prb_group.sigAddNew.connect(self.add_new_probe_group)
+        self.prb_group.sigTreeStateChanged.connect(self.update_probes)
 
     def add_new_probe_group(self, parent):
         """
@@ -165,15 +164,16 @@ class MainWindow(qtw.QMainWindow):
     def update_probes(self):
         """
         recreates self.machine.probes from gui controls in self.probes_group
-        call update_probes method of all docks
         """
         self.machine.probes = {}
-        for probe_child in self.probes_group.children():
+        for probe_child in self.prb_group.children():
             probe_name = probe_child.name()
             grp_probe = probe_child.child("grp_probe_lengths")
             vprobe = [grand_kid.value() for grand_kid in grp_probe]
             probe_vec = qtg.QVector3D(*vprobe)
-            probe = dc.Probe(title=probe_child.title(), length=probe_vec)
+            probe = dc.Probe(
+                title=probe_child.title(), name=probe_child.name(), length=probe_vec
+            )
             self.machine.probes[probe_name] = probe
         self.replot()
 
@@ -209,12 +209,6 @@ class MainWindow(qtw.QMainWindow):
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
 
         self.update_measurements()
-        mmt_choices = {
-            value.title: key for key, value in self.machine.measurements.items()
-        }
-        # if self.plot3d_dock:
-        #     self.plot3d_dock.mmts_to_plot.setLimits(mmt_choices)
-        #     # TODO also 2ddocks
 
     def update_measurements(self):
         """
@@ -236,12 +230,18 @@ class MainWindow(qtw.QMainWindow):
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mmt = dc.Measurement(
                 title=mmt_child.title(),
+                name=mmt_child.name(),
                 artefact=artefact,
                 transform3d=transform3d,
                 probe=probe,
                 data=None,
             )
             self.machine.measurements[mmt_name] = mmt
+
+        for dock in self.plot2d_docks:
+            dock.update_measurement_list()
+        if self.plot3d_dock:
+            self.plot3d_dock.update_measurement_list()
         self.replot()
 
     def change_prb_title(self, param):
@@ -270,12 +270,6 @@ class MainWindow(qtw.QMainWindow):
         """
         param.parent().setOpts(title=param.value())
         self.update_measurements()
-        mmt_choices = {
-            value.title: key for key, value in self.machine.measurements.items()
-        }
-        # self.plot3d_dock.mmts_to_plot.setLimits(mmt_choices)
-        # for dock in self.plot2d_docks:
-        #     dock.mmts_to_plot.setLimits(mmt_choices)
 
     def add_startup_docks(self):
         """

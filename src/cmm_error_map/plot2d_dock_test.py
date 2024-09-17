@@ -23,12 +23,13 @@ class MainWindow(qtw.QMainWindow):
         super(MainWindow, self).__init__()
 
         self.machine = dc.pmm_866
-        p0 = dc.Probe(title="P0", length=qtg.QVector3D(0, 0, 0))
-        p1 = dc.Probe(title="P1", length=qtg.QVector3D(100, 100, -200))
-        self.machine.probes = {"p0": p0, "p1": p1}
+        p0 = dc.Probe(title="P0", name="p0", length=qtg.QVector3D(0, 0, 0))
+        p1 = dc.Probe(title="P1", name="p1", length=qtg.QVector3D(100, 100, -200))
+        self.machine.probes = {p0.name: p0, p1.name: p1}
 
         m1 = dc.Measurement(
             title="m1",
+            name="mmt_00",
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p0,
@@ -36,27 +37,33 @@ class MainWindow(qtw.QMainWindow):
         )
         m2 = dc.Measurement(
             title="m2",
+            name="mmt_01",
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p1,
             data=None,
         )
-        # self.machine.model_params["Rxz"] = 3e-8
-        m1.recalculate(self.machine.model_params)
-        m2.recalculate(self.machine.model_params)
-        self.machine.measurements = {"m1": m1, "m2": m2}
+
+        self.machine.measurements = {m1.name: m1, m2.name: m2}
+        self.machine.recalculate()
 
         self.plot2d_docks = []
+        self.plot3d_docks = []
 
         self.setup_gui()
-        self.make_dock()
+        self.sync_gui()
+        self.make_docks()
 
     def setup_gui(self):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
-        self.slider_group = self.make_model_sliders()
+        self.make_slider_controls()
+        self.make_measurement_controls()
+        self.make_prb_controls()
 
         self.control_group = Parameter.create(type="group", name="main_controls")
+        self.control_group.addChild(self.prb_group)
+        self.control_group.addChild(self.mmt_group)
         self.control_group.addChild(self.slider_group)
 
         self.control_tree = ParameterTree(showHeader=False)
@@ -85,9 +92,9 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
-    def make_dock(self):
+    def make_docks(self):
         """
-        add a Plot2dDock
+        add a Plot2dDock and a Plot3dDock
         """
 
         plot_dock = gc.Plot2dDock("Plot", self.machine)
@@ -97,21 +104,28 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.addDock(plot_dock)
         self.plot2d_docks.append(plot_dock)
 
-    def make_model_sliders(self) -> Parameter:
+        plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
+        plot3d_dock.mmts_to_plot.setValue(["m1"])
+        plot3d_dock.replot()
+
+        self.dock_area.addDock(plot3d_dock)
+        self.plot3d_docks.append(plot3d_dock)
+
+    def make_slider_controls(self) -> Parameter:
         # create sliders
-        slider_group = Parameter.create(
+        self.slider_group = Parameter.create(
             type="group", title="Linear Model", name="linear_model"
         )
-        x_axis = slider_group.addChild(
+        x_axis = self.slider_group.addChild(
             dict(type="group", name="X axis", expanded=False)
         )
-        y_axis = slider_group.addChild(
+        y_axis = self.slider_group.addChild(
             dict(type="group", name="Y axis", expanded=False)
         )
-        z_axis = slider_group.addChild(
+        z_axis = self.slider_group.addChild(
             dict(type="group", name="Z axis", expanded=False)
         )
-        squareness = slider_group.addChild(
+        squareness = self.slider_group.addChild(
             dict(type="group", name="Squareness", expanded=False)
         )
         axes = [x_axis, y_axis, z_axis, squareness]
@@ -129,12 +143,124 @@ class MainWindow(qtw.QMainWindow):
                 )
             )
 
-        slider_group.addChild(
+        self.slider_group.addChild(
             dict(type="action", name="btn_reset_all", title="Reset Model")
         )
 
-        slider_group.sigTreeStateChanged.connect(self.update_model)
-        return slider_group
+        self.slider_group.sigTreeStateChanged.connect(self.update_model)
+
+    def make_measurement_controls(self) -> Parameter:
+        """
+        create from self.machine
+        """
+        self.mmt_group = Parameter.create(
+            type="group",
+            title="Measurements",
+            name="mmt_group",
+            addText="Add Measurement",
+        )
+        self.mmt_group.sigAddNew.connect(self.add_new_mmt)
+        self.mmt_group.sigTreeStateChanged.connect(self.mmt_control_change)
+
+    def add_new_mmt(self, parent):
+        """
+        add a new measurement to self.machine
+        """
+        new_title = f"Measurement {len(parent.childs):02d}"
+        new_name = f"mmt_{len(parent.childs):02d}"
+        key0 = list(self.machine.probes.keys())[0]
+        new_mmt = dc.Measurement(
+            title=new_title,
+            artefact=dc.default_artefacts["KOBA 0620"],
+            transform3d=pg.Transform3D(),
+            probe=self.machine.probes[key0],
+            data=None,
+        )
+        new_mmt.recalculate(self.machine.model_params)
+        self.machine.measurements[new_name] = new_mmt
+
+    def mmt_control_change(self):
+        """
+        event handler for a change in any of the measurement controls
+        recreates self.machine.measurements from gui controls
+        """
+        self.machine.measurements = {}
+
+        for mmt_child in self.mmt_group.children():
+            mmt_name = mmt_child.name()
+            artefact = dc.default_artefacts[mmt_child.child("artefact").value()]
+
+            grp_loc = mmt_child.child("grp_location")
+            vloc = [grand_kid.value() for grand_kid in grp_loc]
+            grp_rot = mmt_child.child("grp_rotation")
+            vrot = [grand_kid.value() for grand_kid in grp_rot]
+            transform3d = gc.vec_to_transform3d(vloc, vrot)
+
+            probe = self.machine.probes[mmt_child.child("probe").value()]
+            mmt = dc.Measurement(
+                title=mmt_child.title(),
+                name=mmt_name,
+                artefact=artefact,
+                transform3d=transform3d,
+                probe=probe,
+                data=None,
+            )
+            self.machine.measurements[mmt_name] = mmt
+
+        self.machine.recalculate()
+
+    def change_mmt_title(self, param):
+        """
+        event handler for a change in measurement title
+        """
+        pass
+
+    def make_prb_controls(self) -> Parameter:
+        """
+        make control group for probes
+        """
+        self.prb_group = Parameter.create(
+            type="group",
+            title="Probes",
+            name="probes_group",
+            addText="Add Probe",
+        )
+        self.sync_gui()
+        self.prb_group.sigAddNew.connect(self.add_new_prb)
+        self.prb_group.sigTreeStateChanged.connect(self.prb_control_change)
+
+    def add_new_prb(self, parent):
+        """
+        add a new probe to self.machine
+        """
+        new_title = f"Probe {len(parent.childs):02d}"
+        new_name = f"prb_{len(parent.childs):02d}"
+        new_prb = dc.Probe(title=new_title, length=qtg.QVector3D())
+        self.machine.probes[new_name] = new_prb
+
+    def prb_control_change(self):
+        """
+        event handler for a change in any of the probe controls
+        recreates self.machine.measurements from gui controls
+        """
+        self.machine.probes = {}
+        for probe_child in self.prb_group.children():
+            probe_name = probe_child.name()
+            grp_probe = probe_child.child("grp_probe_lengths")
+            vprobe = [grand_kid.value() for grand_kid in grp_probe]
+            probe_vec = qtg.QVector3D(*vprobe)
+            probe = dc.Probe(
+                title=probe_child.title(), name=probe_name, length=probe_vec
+            )
+            self.machine.probes[probe_name] = probe
+
+        self.machine.recalculate()
+
+    def change_prb_title(self, param):
+        """
+        event handler for a change in probe name
+        """
+        pass
 
     def update_model(self, group, changes):
         """
@@ -154,13 +280,55 @@ class MainWindow(qtw.QMainWindow):
                         child.setValue(0.0)
         self.replot()
 
-    def recalculate(self):
-        self.machine.recalculate()
-
     def replot(self):
-        self.recalculate()
+        self.machine.recalculate()
         for dock in self.plot2d_docks:
             dock.replot()
+        for dock in self.plot3d_docks:
+            dock.replot()
+
+    def sync_gui(self):
+        """
+        syncs gui from self.machine.measurements and self.machine.probes
+        don't sync location, rotations as they're stored as a transform matrix - YET
+        """
+        with self.prb_group.treeChangeBlocker():
+            prb_group_names = [child.name() for child in self.prb_group.children()]
+            for prb_name, prb in self.machine.probes.items():
+                if prb_name not in prb_group_names:
+                    # new probe group
+                    grp_params = gc.probe_control_grp.copy()
+                    grp_params["name"] = prb_name
+                    prb_child = self.prb_group.addChild(grp_params)
+
+                prb_child = self.prb_group.child(prb_name)
+                prb_child.setOpts(title=prb.title)
+                prb_child.child("prb_title").setValue(prb.title)
+
+        with self.mmt_group.treeChangeBlocker():
+            mmt_group_names = [child.name() for child in self.mmt_group.children()]
+            for mmt_name, mmt in self.machine.measurements.items():
+                if mmt_name not in mmt_group_names:
+                    # new measurement group
+                    grp_params = gc.mmt_control_grp.copy()
+                    grp_params["name"] = mmt_name
+                    mmt_child = self.mmt_group.addChild(grp_params)
+
+                mmt_child = self.mmt_group.child(mmt_name)
+                mmt_child = self.mmt_group.child(mmt_name)
+                mmt_child.setOpts(title=mmt.title)
+                mmt_child.child("mmt_title").setValue(mmt.title)
+                mmt_child.child("artefact").setValue(mmt.artefact.title)
+                prb_child = mmt_child.child("probe")
+                prb_child.setValue(mmt.probe.name)
+                prb_choices = {
+                    value.title: key for key, value in self.machine.probes.items()
+                }
+                prb_child.setLimits(prb_choices)
+        # update measurement check lists in docks
+        # TODO
+        # update probe list in 3d dock
+        # TODO
 
 
 def main():
