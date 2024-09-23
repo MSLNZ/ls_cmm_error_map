@@ -452,15 +452,14 @@ def plot2d_plate(
     basic undeformed plot
     """
 
-    balls = pg.PlotDataItem(color=pg.mkColor(col), size=20)
+    balls = pg.PlotDataItem(color=pg.mkColor(col), size=20, symbol="o", pen=None)
     lines = pg.PlotDataItem(color=pg.mkColor(col), connect="pairs")
-    plotitems = [balls, lines]
 
     update_plot2d_plate(balls, lines, mmt, magnification=1.0)
     w.addItem(balls)
     w.addItem(lines)
 
-    return plotitems
+    return [balls, lines]
 
 
 def update_plot2d_plate(
@@ -474,7 +473,7 @@ def update_plot2d_plate(
 
     nx = mmt.artefact.nballs[0]
     ny = mmt.artefact.nballs[1]
-    ind = np.arange(nx * ny).reshape((ny, nx))
+    ind = np.arange(nx * ny).reshape((nx, ny))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
     ind_lines = np.hstack((indx, indy))
