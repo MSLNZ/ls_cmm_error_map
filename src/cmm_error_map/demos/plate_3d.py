@@ -26,9 +26,12 @@ mmt = dc.Measurement(
     xyz3d=None,
     dev3d=None,
 )
+mmt.artefact.nballs = (5, 4)
 model_params = design.model_parameters_dict.copy()
 mmt.recalculate(model_params)
 
+print(f"{mmt.xyz3d.shape=}")
+print(f"{mmt.xyz3d=}")
 box_lines = gc.plot3d_box(w, col="green")
 balls, plate_lines = gc.plot3d_plate(w, mmt)
 w.show()

@@ -157,7 +157,7 @@ def data_plot3d_plate(
     """
     ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
     x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing
-    y = (ballnumber) // artefact.nballs[1] * artefact.ball_spacing
+    y = (ballnumber) // artefact.nballs[0] * artefact.ball_spacing
     z = (ballnumber) * 0.0
     xyz = np.stack((x, y, z))
     xyz = transform3d.map(xyz)

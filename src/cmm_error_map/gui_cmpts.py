@@ -473,7 +473,7 @@ def update_plot2d_plate(
 
     nx = mmt.artefact.nballs[0]
     ny = mmt.artefact.nballs[1]
-    ind = np.arange(nx * ny).reshape((nx, ny))
+    ind = np.arange(nx * ny).reshape((ny, nx))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
     ind_lines = np.hstack((indx, indy))

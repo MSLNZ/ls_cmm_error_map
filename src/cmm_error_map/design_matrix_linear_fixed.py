@@ -234,7 +234,7 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params, ballspacing=133.0, nballs=(5, 5)):
     ballnumber = np.arange(ball_count)
 
     xp = (ballnumber % nballs[0]) * ballspacing
-    yp = (ballnumber // nballs[1]) * ballspacing
+    yp = (ballnumber // nballs[0]) * ballspacing
     zp = ballnumber * 0.0
 
     XP = np.vstack((xp, yp, zp, np.ones(ball_count)))

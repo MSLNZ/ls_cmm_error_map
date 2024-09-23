@@ -24,6 +24,7 @@ mmt = dc.Measurement(
     xyz3d=None,
     dev3d=None,
 )
+mmt.artefact.nballs = (5, 4)
 model_params = design.model_parameters_dict.copy()
 mmt.recalculate(model_params)
 balls, lines = gc.plot2d_plate(w, mmt)
