@@ -81,7 +81,7 @@ class Measurement:
             ballspacing=self.artefact.ball_spacing,
             nballs=self.artefact.nballs,
         )
-        self.xyz3d, self.dev3d = design.data_plot_plate_3d(
+        self.xyz3d, self.dev3d = data_plot_plate_3d(
             self.artefact,
             self.probe.length,
             model_params,
@@ -137,3 +137,38 @@ pmm_866 = Machine(
     probes={},
     model_params=design.model_parameters_dict.copy(),
 )
+
+
+def data_plot_plate_3d(
+    artefact: ArtefactType,
+    prb_length: qtg.QVector3D,
+    model_params: dict[str, float],
+    transform3d: pg.Transform3D,
+) -> np.ndarray:
+    """
+    calulates the xyz position of the
+    plate given by artefact,
+    at the position defined by transform3d,
+    using probe
+    deformed by model_params and mag
+    returns (3, ...) np.ndarray
+    """
+    ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
+    x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing
+    y = (ballnumber) // artefact.nballs[1] * artefact.ball_spacing
+    z = (ballnumber) * 0.0
+    xyz = np.stack((x, y, z))
+    xyz = transform3d.map(xyz)
+    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
+
+    xE, yE, zE = design.model_linear(
+        xyz[0, :],
+        xyz[1, :],
+        xyz[2, :],
+        list(model_params.values()),
+        xt,
+        yt,
+        zt,
+    )
+    xyz_dev = np.stack((xE, yE, zE))
+    return xyz.T, xyz_dev.T

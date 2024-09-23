@@ -142,14 +142,12 @@ def update_plot_model3d(
 
 
 def plot_plate3d(
-    w: gl.GLViewWidget, artefact: dc.ArtefactType, col="white"
+    w: gl.GLViewWidget, mmt: dc.Measurement, col="white"
 ) -> list[type[gl.GLGraphicsItem]]:
     """
     produces a 3d plot of a ballplate ready for updating with location, rotataion, deformation
     and magnification by update_plot_plate3d
     """
-    prb_length = qtg.QVector3D()
-    model_params = design.model_parameters_dict.copy()
     # undeformed plate with no transform, zero length probe
     # xyz = data_plot_plate_3d(artefact, probe, pars, pg.Transform3D(), 1.0)
     balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
@@ -159,11 +157,8 @@ def plot_plate3d(
     update_plot_plate3d(
         balls,
         lines,
-        artefact,
-        prb_length,
-        model_params,
-        pg.Transform3D(),
-        1.0,
+        mmt,
+        magnification=1.0,
     )
     w.addItem(balls)
     w.addItem(lines)
@@ -210,27 +205,18 @@ def data_plot_plate_3d(
 def update_plot_plate3d(
     balls: gl.GLScatterPlotItem,
     lines: gl.GLLinePlotItem,
-    artefact: dc.ArtefactType,
-    prb_length: qtg.QVector3D,
-    model_params: dict[str, float],
-    transform3d: pg.Transform3D,
-    mag: float,
-):
-    xyz = data_plot_plate_3d(artefact, prb_length, model_params, transform3d, mag)
-    set_data_plot_plate3d(balls, lines, xyz, artefact.nballs)
-
-
-def set_data_plot_plate3d(
-    balls: gl.GLScatterPlotItem,
-    lines: gl.GLLinePlotItem,
-    xyz: np.ndarray,
-    nballs: (int, int),
+    mmt: dc.Measurement,
+    magnification: float,
 ):
     """
-    set data for balls and lines plot from xyz ball position
+    takes the 3d plate position data mmt from mmt applies the magnifiacation
+    and sets the data in balls and lines
     """
+    xyz = mmt.xyz3d + magnification * mmt.dev3d
+    nx = mmt.artefact.nballs[0]
+    ny = mmt.artefact.nballs[1]
     balls.setData(pos=xyz)
-    ind = np.arange(nballs[0] * nballs[1]).reshape((nballs[1], nballs[0]))
+    ind = np.arange(nx * ny).reshape((ny, nx))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
     ind_lines = np.hstack((indx, indy))
@@ -415,19 +401,14 @@ class Plot3dDock(Dock):
             if to_plot:
                 if mmt_name not in self.plot_data:
                     # need a new plot
-                    self.plot_data[mmt_name] = plot_plate3d(
-                        self.plot_widget, mmt.artefact
-                    )
+                    self.plot_data[mmt_name] = plot_plate3d(self.plot_widget, mmt)
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
                 update_plot_plate3d(
                     balls,
                     lines,
-                    mmt.artefact,
-                    mmt.probe.length,
-                    self.machine.model_params,
-                    mmt.transform3d,
+                    mmt,
                     self.magnification,
                 )
 
