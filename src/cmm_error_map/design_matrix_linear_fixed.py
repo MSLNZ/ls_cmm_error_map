@@ -264,8 +264,9 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params, ballspacing=133.0, nballs=(5, 5)):
         ]
     )
     XYZp = np.dot(RZ, XYZp)
-    dXY = XYZp[:2, :] - np.vstack((xp, yp))
-    return dXY.T
+    dev2d = XYZp[:2, :] - np.vstack((xp, yp))
+    xy2d = XYZp[:2, :]
+    return xy2d.T, dev2d.T
 
 
 def machine_deformation(params, xt, yt, zt, spacing=200):

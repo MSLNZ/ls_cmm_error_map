@@ -130,7 +130,7 @@ class MainWindow(qtw.QMainWindow):
             self.machine.model_params = design.model_parameters_dict.copy()
             # update sliders
             with self.slider_group.treeChangeBlocker():
-                for axis_group in self.slider_group.child("linear_model").children():
+                for axis_group in self.slider_group.children():
                     for child in axis_group.children():
                         child.setValue(0.0)
         self.replot()
@@ -234,7 +234,8 @@ class MainWindow(qtw.QMainWindow):
                 artefact=artefact,
                 transform3d=transform3d,
                 probe=probe,
-                data2d=None,
+                xy2d=None,
+                dev2d=None,
                 xyz3d=None,
                 dev3d=None,
             )
@@ -287,7 +288,6 @@ class MainWindow(qtw.QMainWindow):
         can have lots of these
         """
         new_plot_dock = gc.Plot2dDock("New Dock", self.machine)
-        new_plot_dock.update_gui.connect(self.gui_update_request)
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
         new_plot_dock.replot()
@@ -301,9 +301,6 @@ class MainWindow(qtw.QMainWindow):
             self.plot3d_dock.replot()
         for dock in self.plot2d_docks:
             dock.replot()
-
-    def gui_update_request(self, arg):
-        print("received a gui update request")
 
     def add_summary(self):
         text = "Summary\n"

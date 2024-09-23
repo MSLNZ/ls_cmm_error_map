@@ -59,7 +59,8 @@ class Measurement:
     artefact: ArtefactType
     transform3d: pg.Transform3D
     probe: Probe
-    data2d: np.ndarray
+    xy2d: np.ndarray
+    dev2d: np.ndarray
     xyz3d: np.ndarray
     dev3d: np.ndarray
 
@@ -72,7 +73,7 @@ class Measurement:
         RP = self.transform3d.matrix()
         xt, yt, zt = self.probe.length.x(), self.probe.length.y(), self.probe.length.z()
 
-        self.data2d = design.modelled_mmts_XYZ(
+        self.xy2d, self.dev2d = design.modelled_mmts_XYZ(
             RP,
             xt,
             yt,
@@ -81,7 +82,7 @@ class Measurement:
             ballspacing=self.artefact.ball_spacing,
             nballs=self.artefact.nballs,
         )
-        self.xyz3d, self.dev3d = data_plot_plate_3d(
+        self.xyz3d, self.dev3d = data_plot3d_plate(
             self.artefact,
             self.probe.length,
             model_params,
@@ -139,19 +140,20 @@ pmm_866 = Machine(
 )
 
 
-def data_plot_plate_3d(
+def data_plot3d_plate(
     artefact: ArtefactType,
     prb_length: qtg.QVector3D,
     model_params: dict[str, float],
     transform3d: pg.Transform3D,
-) -> np.ndarray:
+) -> (np.ndarray, np.ndarray):
     """
-    calulates the xyz position of the
+    calulates the nominal position xyz of the
     plate given by artefact,
     at the position defined by transform3d,
     using probe
-    deformed by model_params and mag
-    returns (3, ...) np.ndarray
+    and the deviation from nominal xyz_dev
+    for the plate deformed by model_params
+    returns 2 (n,3) np.ndarray
     """
     ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
     x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing

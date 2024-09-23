@@ -9,9 +9,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyqtgraph.Qt.QtCore import Qt as qtc
-import pyqtgraph.Qt.QtGui as qtg
-
-from PySide6.QtCore import Signal
+# import pyqtgraph.Qt.QtGui as qtg
 
 import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.data_cmpts as dc
@@ -46,7 +44,7 @@ magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 # MARK: 3D plots
 
 
-def plot_model3d(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
+def plot3d_box(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
     """
     produces a 3D plot of the undeformed machine ready for updating with
     deformation and magnification via update_plot_model3d
@@ -105,11 +103,11 @@ def plot_model3d(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
     return plot_lines
 
 
-def update_plot_model3d(
+def update_plot3d_box(
     plot_lines: list[gl.GLLinePlotItem], params: dict, xt, yt, zt, mag
 ):
     """
-    update a plot produced by plot_model3d with a new set of params
+    update a plot produced by plot3d_box with a new set of params
     """
     pars = list(params.values())
 
@@ -141,7 +139,7 @@ def update_plot_model3d(
             pn += 1
 
 
-def plot_plate3d(
+def plot3d_plate(
     w: gl.GLViewWidget, mmt: dc.Measurement, col="white"
 ) -> list[type[gl.GLGraphicsItem]]:
     """
@@ -149,12 +147,11 @@ def plot_plate3d(
     and magnification by update_plot_plate3d
     """
     # undeformed plate with no transform, zero length probe
-    # xyz = data_plot_plate_3d(artefact, probe, pars, pg.Transform3D(), 1.0)
     balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
     lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
 
     plotitems = [balls, lines]
-    update_plot_plate3d(
+    update_plot3d_plate(
         balls,
         lines,
         mmt,
@@ -166,43 +163,7 @@ def plot_plate3d(
     return plotitems
 
 
-def data_plot_plate_3d(
-    artefact: dc.ArtefactType,
-    prb_length: qtg.QVector3D,
-    model_params: dict[str, float],
-    transform3d: pg.Transform3D,
-    mag: float,
-) -> np.ndarray:
-    """
-    calulates the xyz position of the
-    plate given by artefact,
-    at the position defined by transform3d,
-    using probe
-    deformed by model_params and mag
-    returns (3, ...) np.ndarray
-    """
-    ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
-    x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing
-    y = (ballnumber) // artefact.nballs[1] * artefact.ball_spacing
-    z = (ballnumber) * 0.0
-    xyz = np.stack((x, y, z))
-    xyz = transform3d.map(xyz)
-    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
-
-    xE, yE, zE = design.model_linear(
-        xyz[0, :],
-        xyz[1, :],
-        xyz[2, :],
-        list(model_params.values()),
-        xt,
-        yt,
-        zt,
-    )
-    xyz = xyz + mag * np.stack((xE, yE, zE))
-    return xyz.T
-
-
-def update_plot_plate3d(
+def update_plot3d_plate(
     balls: gl.GLScatterPlotItem,
     lines: gl.GLLinePlotItem,
     mmt: dc.Measurement,
@@ -213,9 +174,10 @@ def update_plot_plate3d(
     and sets the data in balls and lines
     """
     xyz = mmt.xyz3d + magnification * mmt.dev3d
+    balls.setData(pos=xyz)
+
     nx = mmt.artefact.nballs[0]
     ny = mmt.artefact.nballs[1]
-    balls.setData(pos=xyz)
     ind = np.arange(nx * ny).reshape((ny, nx))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
@@ -350,7 +312,7 @@ class Plot3dDock(Dock):
         self.add_control_tree()
 
         # undeformed
-        plot_model3d(self.plot_widget, col="green")
+        plot3d_box(self.plot_widget, col="green")
 
         self.addWidget(self.plot_widget)
 
@@ -385,7 +347,7 @@ class Plot3dDock(Dock):
         self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
 
-    def update_plot_ball_plates(self):
+    def update_plot_plates(self):
         """
         plots an outline of the selected measurements in this 3d plot
         plot_data_2d.transform3d
@@ -401,11 +363,11 @@ class Plot3dDock(Dock):
             if to_plot:
                 if mmt_name not in self.plot_data:
                     # need a new plot
-                    self.plot_data[mmt_name] = plot_plate3d(self.plot_widget, mmt)
+                    self.plot_data[mmt_name] = plot3d_plate(self.plot_widget, mmt)
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
-                update_plot_plate3d(
+                update_plot3d_plate(
                     balls,
                     lines,
                     mmt,
@@ -435,9 +397,9 @@ class Plot3dDock(Dock):
         xt, yt, zt = vprobe.x(), vprobe.y(), vprobe.z()
         if len(self.box_lineplots) == 0:
             # haven't plotted the box deformation yet
-            self.box_lineplots = plot_model3d(self.plot_widget, col="blue")
+            self.box_lineplots = plot3d_box(self.plot_widget, col="blue")
 
-        update_plot_model3d(
+        update_plot3d_box(
             self.box_lineplots,
             self.machine.model_params,
             xt,
@@ -445,7 +407,7 @@ class Plot3dDock(Dock):
             zt,
             self.magnification,
         )
-        self.update_plot_ball_plates()
+        self.update_plot_plates()
 
 
 # MARK: 2D Plots
@@ -482,137 +444,42 @@ dock2d_control_grp = {
 }
 
 
-# TODO these need to be parameters in gui or config
-ballspacing = 133.0
-
-U95 = 1.2
-
-
-def single_grid_plot_data(
-    dxy,
-    mag,
-    ballspacing=133.0,
-    nballs=(5, 5),
-    lines=True,
-    circles=True,
-):
-    """
-    drawing red crosses on out of tolerance point commented out
-    until I figure how to update them (number of red crosses can change)
-    dxy shape(25,2) or shape (20,2) single set of data to plot on current figure
-    in order of ballnumber
-    """
-    ballnumber = np.arange(dxy.shape[0])
-    xplaten = (ballnumber) % nballs[0]
-    yplaten = (ballnumber) // nballs[1]
-
-    xplot = mag * dxy[:, 0] + xplaten * ballspacing
-    yplot = mag * dxy[:, 1] + yplaten * ballspacing
-
-    data = []
-    data.append((xplot, yplot))
-
-    if lines:
-        for i in range(0, 5):
-            data.append((xplot[xplaten[:] == i], yplot[xplaten[:] == i]))
-            data.append((xplot[yplaten[:] == i], yplot[yplaten[:] == i]))
-
-    # if circles:
-    #     # find points outside circles and mark with cross
-    #     ballnumber = np.arange(dxy.shape[0])
-    #     xplaten = (ballnumber) % 5
-    #     yplaten = (ballnumber) // 5
-    #     xcirc = xplaten * ballspacing
-    #     ycirc = yplaten * ballspacing
-    #     rcirc = mag * (U95 + ((xcirc**2 + ycirc**2) ** 0.5) / 400.0) * 1e-3
-    #     err = (dxy[:, 0] ** 2 + dxy[:, 1] ** 2) ** 0.5
-    #     xout = xplot[err > rcirc / mag]
-    #     yout = yplot[err > rcirc / mag]
-    #     # data.append((xout, yout))
-    return data
-
-
-def plot_ballplate(
-    plotw: pg.PlotWidget,
-    ballspacing=133.0,
-    nballs=(5, 5),
-    lines=True,
-    circles=True,
+def plot2d_plate(
+    w: pg.PlotWidget, mmt: dc.Measurement, col="white"
 ) -> list[pg.PlotDataItem]:
     """
     pyqtgraph 2d plot of ballplate errors
     basic undeformed plot
     """
 
-    params = [0.0] * 21
-    # plate transforamtion and position are arbitary here with params all zero
-    RP = np.array(
-        [
-            [1.0, 0.0, 0.0, 100.0],
-            [0.0, 1.0, 0.0, 100.0],
-            [0.0, 0.0, 1.0, 100.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-    xt, yt, zt = 0.0, 0.0, 0.0
-    lineplots = []
+    balls = pg.PlotDataItem(color=pg.mkColor(col), size=20)
+    lines = pg.PlotDataItem(color=pg.mkColor(col), connect="pairs")
+    plotitems = [balls, lines]
 
-    mag = 1
-    dxy = design.modelled_mmts_XYZ(
-        RP, xt, yt, zt, params, ballspacing=ballspacing, nballs=nballs
-    )
-    data = single_grid_plot_data(dxy, mag)
-    di = 0
-    p1 = plotw.plot(
-        x=data[di][0],
-        y=data[di][1],
-        pen=None,
-        symbol="o",
-    )
-    lineplots.append(p1)
-    di += 1
+    update_plot2d_plate(balls, lines, mmt, magnification=1.0)
+    w.addItem(balls)
+    w.addItem(lines)
 
-    if lines:
-        for i in range(0, nballs[0]):
-            p2 = plotw.plot(x=data[di][0], y=data[di][1])
-            di += 1
-            lineplots.append(p2)
-            p3 = plotw.plot(x=data[di][0], y=data[di][1])
-            di += 1
-            lineplots.append(p3)
+    return plotitems
 
-    if circles:
-        # draw uncertainty circles at nominal positions
-        ballnumber = np.arange(data[0][0].shape[0])
-        xplaten = (ballnumber) % 5
-        yplaten = (ballnumber) // 5
-        xcirc = xplaten * ballspacing
-        ycirc = yplaten * ballspacing
-        # TODO make U95 a function that can be configed
-        # U95 = 1.2 + L/400 is hardcoded here
-        rcirc = mag * (U95 + ((xcirc**2 + ycirc**2) ** 0.5) / 400.0) * 1e-3
 
-        p4 = plotw.plot(
-            x=xcirc, y=ycirc, pen=None, symbol="o", symbolSize=rcirc, pxMode=False
-        )
-        lineplots.append(p4)
+def update_plot2d_plate(
+    balls: pg.PlotDataItem,
+    lines: pg.PlotDataItem,
+    mmt: dc.Measurement,
+    magnification: float,
+):
+    xy = mmt.xy2d + magnification * mmt.dev2d
+    balls.setData(xy)
 
-        # # points outside circles are marked with cross
-        # p5 = plotw.plot(
-        #     x=data[di][0],
-        #     y=data[di][1],
-        #     symbol="x",
-        #     symbolBrush="red",
-        #     symbolSize=10,
-        #     pen=None,
-        # )
-        # lineplots.append(p5)
-        plotw.setAspectLocked()
-        grid = pg.GridItem()
-        grid.setTickSpacing(x=[ballspacing], y=[ballspacing])
-        plotw.addItem(grid)
-
-    return lineplots
+    nx = mmt.artefact.nballs[0]
+    ny = mmt.artefact.nballs[1]
+    ind = np.arange(nx * ny).reshape((ny, nx))
+    indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
+    indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
+    ind_lines = np.hstack((indx, indy))
+    pos = xy[ind_lines, :]
+    lines.setData(pos)
 
 
 class Plot2dDock(Dock):
@@ -620,8 +487,6 @@ class Plot2dDock(Dock):
     a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
     knows how to draw and update itself based on the values in parameter tree
     """
-
-    update_gui = Signal((str,))
 
     def __init__(self, name, machine):
         super(Plot2dDock, self).__init__(name)
@@ -631,12 +496,10 @@ class Plot2dDock(Dock):
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
+        self.plot_widget.setAspectLocked()
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
-
-    def request_update_gui(self):
-        self.update_gui.emit(self.name)
 
     def add_control_tree(self):
         """
@@ -702,23 +565,16 @@ class Plot2dDock(Dock):
             if to_plot:
                 if mmt_name not in self.plot_data:
                     # need a new plot
-                    self.plot_data[mmt_name] = plot_ballplate(self.plot_widget)
+                    self.plot_data[mmt_name] = plot2d_plate(self.plot_widget, mmt)
 
                 # update plot
-                # convert measurement data to data needed to update PlotDataItems
-                # mmt = self.machine.measurements[mmt_name]
-                dxy = mmt.data2d
-                ballspacing = mmt.artefact.ball_spacing
-                nballs = mmt.artefact.nballs
-                data = single_grid_plot_data(
-                    dxy,
+                balls, lines = self.plot_data[mmt_name]
+                update_plot2d_plate(
+                    balls,
+                    lines,
+                    mmt,
                     self.magnification,
-                    ballspacing=ballspacing,
-                    nballs=nballs,
                 )
-                # update PlotDataItems with new data
-                for datum, plot in zip(data, self.plot_data[mmt_name]):
-                    plot.setData(x=datum[0], y=datum[1])
 
 
 def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
