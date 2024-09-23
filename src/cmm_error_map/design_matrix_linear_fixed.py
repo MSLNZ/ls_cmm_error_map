@@ -10,6 +10,9 @@
 # Licence:     <your licence>
 # -------------------------------------------------------------------------------
 import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.Qt.QtGui as qtg
+import cmm_error_map.data_cmpts as dc
 
 model_parameters_dict = {
     "Txx": 0.0,
@@ -367,3 +370,42 @@ def measurement_vector(meandata):
     b[:130] = meandata[:, 3]
     b[130:] = meandata[:, 4]
     return b
+
+
+# ------------------
+# code using pyqtgraph vector and transfrom structures
+
+
+def data_plot_plate_3d(
+    artefact: dc.ArtefactType,
+    prb_length: qtg.QVector3D,
+    model_params: dict[str, float],
+    transform3d: pg.Transform3D,
+) -> np.ndarray:
+    """
+    calulates the xyz position of the
+    plate given by artefact,
+    at the position defined by transform3d,
+    using probe
+    deformed by model_params and mag
+    returns (3, ...) np.ndarray
+    """
+    ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
+    x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing
+    y = (ballnumber) // artefact.nballs[1] * artefact.ball_spacing
+    z = (ballnumber) * 0.0
+    xyz = np.stack((x, y, z))
+    xyz = transform3d.map(xyz)
+    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
+
+    xE, yE, zE = model_linear(
+        xyz[0, :],
+        xyz[1, :],
+        xyz[2, :],
+        list(model_params.values()),
+        xt,
+        yt,
+        zt,
+    )
+    xyz_dev = np.stack((xE, yE, zE))
+    return xyz, xyz_dev

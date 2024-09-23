@@ -41,7 +41,7 @@ class MachineType:
 @dataclass
 class ArtefactType:
     title: str
-    nballs: (float, float)
+    nballs: (int, int)
     ball_spacing: float
 
 
@@ -59,7 +59,9 @@ class Measurement:
     artefact: ArtefactType
     transform3d: pg.Transform3D
     probe: Probe
-    data: np.ndarray
+    data2d: np.ndarray
+    xyz3d: np.ndarray
+    dev3d: np.ndarray
 
     def recalculate(self, model_params):
         """
@@ -70,7 +72,7 @@ class Measurement:
         RP = self.transform3d.matrix()
         xt, yt, zt = self.probe.length.x(), self.probe.length.y(), self.probe.length.z()
 
-        self.data = design.modelled_mmts_XYZ(
+        self.data2d = design.modelled_mmts_XYZ(
             RP,
             xt,
             yt,
@@ -78,6 +80,12 @@ class Measurement:
             pars,
             ballspacing=self.artefact.ball_spacing,
             nballs=self.artefact.nballs,
+        )
+        self.xyz3d, self.dev3d = design.data_plot_plate_3d(
+            self.artefact,
+            self.probe.length,
+            model_params,
+            self.transform3d,
         )
 
 

@@ -33,7 +33,7 @@ class MainWindow(qtw.QMainWindow):
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p0,
-            data=None,
+            data2d=None,
         )
         m2 = dc.Measurement(
             title="m2",
@@ -41,7 +41,7 @@ class MainWindow(qtw.QMainWindow):
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p1,
-            data=None,
+            data2d=None,
         )
 
         self.machine.measurements = {m1.name: m1, m2.name: m2}
@@ -174,7 +174,7 @@ class MainWindow(qtw.QMainWindow):
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=self.machine.probes[key0],
-            data=None,
+            data2d=None,
         )
         new_mmt.recalculate(self.machine.model_params)
         self.machine.measurements[new_name] = new_mmt
@@ -203,7 +203,7 @@ class MainWindow(qtw.QMainWindow):
                 artefact=artefact,
                 transform3d=transform3d,
                 probe=probe,
-                data=None,
+                data2d=None,
             )
             self.machine.measurements[mmt_name] = mmt
 

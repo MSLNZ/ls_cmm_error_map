@@ -234,7 +234,9 @@ class MainWindow(qtw.QMainWindow):
                 artefact=artefact,
                 transform3d=transform3d,
                 probe=probe,
-                data=None,
+                data2d=None,
+                xyz3d=None,
+                dev3d=None,
             )
             self.machine.measurements[mmt_name] = mmt
 

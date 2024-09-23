@@ -9,7 +9,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyqtgraph.Qt.QtCore import Qt as qtc
-# import pyqtgraph.Qt.QtGui as qtg
+import pyqtgraph.Qt.QtGui as qtg
 
 from PySide6.QtCore import Signal
 
@@ -48,8 +48,8 @@ magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 
 def plot_model3d(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
     """
-    produces a 3D magniifed plot of the undeformed machine ready for updating with
-    deformation via update_plot_model3d
+    produces a 3D plot of the undeformed machine ready for updating with
+    deformation and magnification via update_plot_model3d
     """
     params = [0.0] * 21
     XYZ, eXYZ = design.machine_deformation(params, 0.0, 0.0, 0.0)
@@ -139,6 +139,103 @@ def update_plot_model3d(
             pts = pXYZ_3D[i, j, :, :]
             plot_lines[pn].setData(pos=pts)
             pn += 1
+
+
+def plot_plate3d(
+    w: gl.GLViewWidget, artefact: dc.ArtefactType, col="white"
+) -> list[type[gl.GLGraphicsItem]]:
+    """
+    produces a 3d plot of a ballplate ready for updating with location, rotataion, deformation
+    and magnification by update_plot_plate3d
+    """
+    prb_length = qtg.QVector3D()
+    model_params = design.model_parameters_dict.copy()
+    # undeformed plate with no transform, zero length probe
+    # xyz = data_plot_plate_3d(artefact, probe, pars, pg.Transform3D(), 1.0)
+    balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
+    lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
+
+    plotitems = [balls, lines]
+    update_plot_plate3d(
+        balls,
+        lines,
+        artefact,
+        prb_length,
+        model_params,
+        pg.Transform3D(),
+        1.0,
+    )
+    w.addItem(balls)
+    w.addItem(lines)
+
+    return plotitems
+
+
+def data_plot_plate_3d(
+    artefact: dc.ArtefactType,
+    prb_length: qtg.QVector3D,
+    model_params: dict[str, float],
+    transform3d: pg.Transform3D,
+    mag: float,
+) -> np.ndarray:
+    """
+    calulates the xyz position of the
+    plate given by artefact,
+    at the position defined by transform3d,
+    using probe
+    deformed by model_params and mag
+    returns (3, ...) np.ndarray
+    """
+    ballnumber = np.arange(artefact.nballs[0] * artefact.nballs[1])
+    x = (ballnumber) % artefact.nballs[0] * artefact.ball_spacing
+    y = (ballnumber) // artefact.nballs[1] * artefact.ball_spacing
+    z = (ballnumber) * 0.0
+    xyz = np.stack((x, y, z))
+    xyz = transform3d.map(xyz)
+    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
+
+    xE, yE, zE = design.model_linear(
+        xyz[0, :],
+        xyz[1, :],
+        xyz[2, :],
+        list(model_params.values()),
+        xt,
+        yt,
+        zt,
+    )
+    xyz = xyz + mag * np.stack((xE, yE, zE))
+    return xyz.T
+
+
+def update_plot_plate3d(
+    balls: gl.GLScatterPlotItem,
+    lines: gl.GLLinePlotItem,
+    artefact: dc.ArtefactType,
+    prb_length: qtg.QVector3D,
+    model_params: dict[str, float],
+    transform3d: pg.Transform3D,
+    mag: float,
+):
+    xyz = data_plot_plate_3d(artefact, prb_length, model_params, transform3d, mag)
+    set_data_plot_plate3d(balls, lines, xyz, artefact.nballs)
+
+
+def set_data_plot_plate3d(
+    balls: gl.GLScatterPlotItem,
+    lines: gl.GLLinePlotItem,
+    xyz: np.ndarray,
+    nballs: (int, int),
+):
+    """
+    set data for balls and lines plot from xyz ball position
+    """
+    balls.setData(pos=xyz)
+    ind = np.arange(nballs[0] * nballs[1]).reshape((nballs[1], nballs[0]))
+    indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
+    indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
+    ind_lines = np.hstack((indx, indy))
+    pos = xyz[ind_lines, :]
+    lines.setData(pos=pos)
 
 
 dock3d_control_grp = {
@@ -302,41 +399,37 @@ class Plot3dDock(Dock):
         self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
 
-    # def plot_ball_plate(self, artefact: dict, plot_data_2d: PlotData2d):
-    #     """
-    #     plots an outline of the given artefact at the transform defined by
-    #     plot_data_2d.transform3d
-    #     """
-    #     new_artefact = ArtefactData3d()
-    #     new_artefact.title = artefact["title"]
-    #     new_artefact.ball_spacing = artefact["ball_spacing"]
-    #     new_artefact.nballs = artefact["nballs"]
+    def update_plot_ball_plates(self):
+        """
+        plots an outline of the selected measurements in this 3d plot
+        plot_data_2d.transform3d
+        """
+        for mmt_name, mmt in self.machine.measurements.items():
+            to_plot = mmt.title in self.mmts_to_plot.value()
+            if not to_plot and mmt_name in self.plot_data:
+                # remove plotlines
+                for plot in self.plot_data[mmt_name]:
+                    self.plot_widget.removeItem(plot)
+                del self.plot_data[mmt_name]
 
-    #     xballs = artefact["nballs"][0]
-    #     yballs = artefact["nballs"][0]
-    #     ball_count = xballs * yballs
-    #     ballnumber = np.arange(ball_count)
-    #     ballspacing = artefact["ball_spacing"]
-    #     sizex = (xballs - 1) * ballspacing
-    #     sizey = (yballs - 1) * ballspacing
+            if to_plot:
+                if mmt_name not in self.plot_data:
+                    # need a new plot
+                    self.plot_data[mmt_name] = plot_plate3d(
+                        self.plot_widget, mmt.artefact
+                    )
 
-    #     xp = (ballnumber % xballs) * ballspacing
-    #     yp = (ballnumber // yballs) * ballspacing
-    #     xyz1 = np.stack((xp, yp, np.zeros_like(xp), np.ones_like(xp)))
-    #     pts = plot_data_2d.transform3d.matrix() @ xyz1
-    #     col = "red"
-    #     new_artefact.points = gl.GLScatterPlotItem(pos=pts.T, color=pg.mkColor(col))
-
-    #     grid = gl.GLGridItem(color=pg.mkColor("red"))
-    #     grid.setSize(sizex, sizey, 0)
-    #     grid.setSpacing(ballspacing, ballspacing, 0)
-    #     grid.translate(sizex / 2, sizey / 2, 0)
-
-    #     new_artefact.grid = grid
-    #     self.artefacts[new_artefact.title] = new_artefact
-
-    #     self.plot_widget.addItem(new_artefact.points)
-    #     self.plot_widget.addItem(grid)
+                # update plot
+                balls, lines = self.plot_data[mmt_name]
+                update_plot_plate3d(
+                    balls,
+                    lines,
+                    mmt.artefact,
+                    mmt.probe.length,
+                    self.machine.model_params,
+                    mmt.transform3d,
+                    self.magnification,
+                )
 
     def change_magnification(self, control):
         """
@@ -371,6 +464,7 @@ class Plot3dDock(Dock):
             zt,
             self.magnification,
         )
+        self.update_plot_ball_plates()
 
 
 # MARK: 2D Plots
@@ -498,7 +592,7 @@ def plot_ballplate(
     di += 1
 
     if lines:
-        for i in range(0, 5):
+        for i in range(0, nballs[0]):
             p2 = plotw.plot(x=data[di][0], y=data[di][1])
             di += 1
             lineplots.append(p2)
@@ -631,8 +725,8 @@ class Plot2dDock(Dock):
 
                 # update plot
                 # convert measurement data to data needed to update PlotDataItems
-                mmt = self.machine.measurements[mmt_name]
-                dxy = mmt.data
+                # mmt = self.machine.measurements[mmt_name]
+                dxy = mmt.data2d
                 ballspacing = mmt.artefact.ball_spacing
                 nballs = mmt.artefact.nballs
                 data = single_grid_plot_data(

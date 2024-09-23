@@ -45,14 +45,14 @@ class MainWindow(qtw.QMainWindow):
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p0,
-            data=None,
+            data2d=None,
         )
         m2 = dc.Measurement(
             title="m2",
             artefact=dc.default_artefacts["KOBA 0620"],
             transform3d=pg.Transform3D(),
             probe=p1,
-            data=None,
+            data2d=None,
         )
         self.machine.model_params["Rxz"] = 3e-8
         m1.recalculate(self.machine.model_params)
