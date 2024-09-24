@@ -11,7 +11,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
 # import pyqtgraph.Qt.QtGui as qtg
 
-import cmm_error_map.design_matrix_linear_fixed as design
+# import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.data_cmpts as dc
 
 slider_factors = {
@@ -44,46 +44,8 @@ magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
 # MARK: 3D plots
 
 
-def plot3d_box(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
-    """
-    produces a 3D plot of the undeformed machine ready for updating with
-    deformation and magnification via update_plot_model3d
-    """
-    params = [0.0] * 21
-    XYZ, eXYZ = design.machine_deformation(params, 0.0, 0.0, 0.0)
-    pXYZ_3D = XYZ + eXYZ
-
-    w.setCameraPosition(distance=2000)
-
-    nx, ny, nz = XYZ.shape[:3]
-
-    plot_lines = []
-
-    # lines parallel to x axis
-    for j in range(ny):
-        for k in range(nz):
-            pts = pXYZ_3D[:, j, k, :]
-            plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
-            w.addItem(plt)
-            plot_lines.append(plt)
-
-    # lines parallel to y axis
-    for i in range(nx):
-        for k in range(nz):
-            pts = pXYZ_3D[i, :, k, :]
-            plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
-            w.addItem(plt)
-            plot_lines.append(plt)
-
-    # lines parallel to z axis
-    for i in range(nx):
-        for j in range(ny):
-            pts = pXYZ_3D[i, j, :, :]
-            plt = gl.GLLinePlotItem(pos=pts, color=pg.mkColor(col), antialias=True)
-            w.addItem(plt)
-            plot_lines.append(plt)
-
-    # axis
+def plot3d_axis(w):
+    # axis items
     org = gl.GLScatterPlotItem(
         pos=(0, 0, 0), size=20, color=pg.mkColor("white"), pxMode=False
     )
@@ -100,43 +62,35 @@ def plot3d_box(w: gl.GLViewWidget, col="white") -> list[gl.GLLinePlotItem]:
     zlabel = gl.GLTextItem(pos=(0.0, 0.0, 700.0), text="Z")
     w.addItem(zlabel)
 
-    return plot_lines
+
+def plot3d_box(w: gl.GLViewWidget, box: dc.BoxGrid, col="white") -> gl.GLLinePlotItem:
+    """
+    produces a 3D plot of the undeformed machine ready for updating with
+    deformation and magnification via update_plot_model3d
+    """
+    # undeformed box
+    fixed_box = gl.GLLinePlotItem(color=pg.mkColor("green"), mode="lines")
+    update_plot3d_box(fixed_box, box, 1.0)
+    w.addItem(fixed_box)
+
+    # model deformed box
+    gridlines = gl.GLLinePlotItem(color=pg.mkColor(col), mode="lines")
+    update_plot3d_box(gridlines, box, 1.0)
+
+    w.addItem(gridlines)
+    w.setCameraPosition(distance=2000)
+
+    return gridlines
 
 
-def update_plot3d_box(
-    plot_lines: list[gl.GLLinePlotItem], params: dict, xt, yt, zt, mag
-):
+def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
     """
     update a plot produced by plot3d_box with a new set of params
     """
-    pars = list(params.values())
 
-    XYZ, eXYZ = design.machine_deformation(pars, xt, yt, zt)
-    pXYZ_3D = XYZ + mag * eXYZ
-
-    nx, ny, nz = XYZ.shape[:3]
-
-    # lines parallel to x axis
-    pn = 0
-    for j in range(ny):
-        for k in range(nz):
-            pts = pXYZ_3D[:, j, k, :]
-            plot_lines[pn].setData(pos=pts)
-            pn += 1
-
-    # lines parallel to y axis
-    for i in range(nx):
-        for k in range(nz):
-            pts = pXYZ_3D[i, :, k, :]
-            plot_lines[pn].setData(pos=pts)
-            pn += 1
-
-    # lines parallel to z axis
-    for i in range(nx):
-        for j in range(ny):
-            pts = pXYZ_3D[i, j, :, :]
-            plot_lines[pn].setData(pos=pts)
-            pn += 1
+    ind = grid_line_index(box.npts)
+    pts = box.xyz3d[ind] + mag * box.dev3d[ind]
+    gridlines.setData(pos=pts)
 
 
 def plot3d_plate(
@@ -150,7 +104,6 @@ def plot3d_plate(
     balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
     lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
 
-    plotitems = [balls, lines]
     update_plot3d_plate(
         balls,
         lines,
@@ -160,7 +113,7 @@ def plot3d_plate(
     w.addItem(balls)
     w.addItem(lines)
 
-    return plotitems
+    return [balls, lines]
 
 
 def update_plot3d_plate(
@@ -184,6 +137,32 @@ def update_plot3d_plate(
     ind_lines = np.hstack((indx, indy))
     pos = xyz[ind_lines, :]
     lines.setData(pos=pos)
+
+
+# used to assign controls to axis groups
+axis_group = {
+    "Txx": 0,
+    "Txy": 0,
+    "Txz": 0,
+    "Tyx": 1,
+    "Tyy": 1,
+    "Tyz": 1,
+    "Tzx": 2,
+    "Tzy": 2,
+    "Tzz": 2,
+    "Rxx": 0,
+    "Rxy": 0,
+    "Rxz": 0,
+    "Ryx": 1,
+    "Ryy": 1,
+    "Ryz": 1,
+    "Rzx": 2,
+    "Rzy": 2,
+    "Rzz": 2,
+    "Wxy": 3,
+    "Wxz": 3,
+    "Wyz": 3,
+}
 
 
 dock3d_control_grp = {
@@ -306,13 +285,14 @@ class Plot3dDock(Dock):
         self.machine = machine
 
         self.plot_data: dict[str, list[gl.GLLinePlotItem]] = {}
-        self.box_lineplots: list[gl.GLLinePlotItem] = []
+        self.box_lineplot: gl.GLLinePlotItem = None
 
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
 
         # undeformed
-        plot3d_box(self.plot_widget, col="green")
+        # plot3d_box(self.plot_widget, box?, col="green")
+        plot3d_axis(self.plot_widget)
 
         self.addWidget(self.plot_widget)
 
@@ -392,21 +372,14 @@ class Plot3dDock(Dock):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
         """
-        probe_box_name = self.probe_box.value()
-        vprobe = self.machine.probes[probe_box_name].length
-        xt, yt, zt = vprobe.x(), vprobe.y(), vprobe.z()
-        if len(self.box_lineplots) == 0:
+        box = self.machine.boxes[self.probe_box.value()]
+        # print(f"{self.probe_box.value()=}")
+        # print(f"{box=}")
+        if self.box_lineplot is None:
             # haven't plotted the box deformation yet
-            self.box_lineplots = plot3d_box(self.plot_widget, col="blue")
+            self.box_lineplot = plot3d_box(self.plot_widget, box, col="blue")
 
-        update_plot3d_box(
-            self.box_lineplots,
-            self.machine.model_params,
-            xt,
-            yt,
-            zt,
-            self.magnification,
-        )
+        update_plot3d_box(self.box_lineplot, box, self.magnification)
         self.update_plot_plates()
 
 
@@ -589,3 +562,63 @@ def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
     mat.rotate(vrot[1], 0.0, 1.0, 0.0)
     mat.rotate(vrot[0], 1.0, 0.0, 0.0)
     return mat
+
+
+def old_grid_line_indicies(size=(5, 4, 4)):
+    """
+    produce an array of indicies (n, 3)
+    where each pair of indices represents a line in th 3d grid
+    plotting the box deformation
+    """
+    nx, ny, nz = size
+    indicies = []
+    indx = np.repeat(np.arange(nx), 2)[1:-1]
+    indy = np.repeat(np.arange(ny), 2)[1:-1]
+    indz = np.repeat(np.arange(nz), 2)[1:-1]
+
+    # lines parallel to x-axis
+    for k in range(nz):
+        for j in range(ny):
+            ind = [[i, j, k] for i in indx]
+            indicies.extend(ind)
+
+    # lines parallel to y-axis
+    for k in range(nz):
+        for i in range(nx):
+            ind = [[i, j, k] for j in indy]
+            indicies.extend(ind)
+
+    # lines parallel to z-axis
+    for j in range(ny):
+        for i in range(nx):
+            ind = [[i, j, k] for k in indz]
+            indicies.extend(ind)
+    return np.array(indicies)
+
+
+def grid_line_index(size=(5, 4, 4)):
+    nx, ny, nz = size
+    indicies = []
+    indx = np.repeat(np.arange(nx), 2)[1:-1]
+    indy = np.repeat(np.arange(ny), 2)[1:-1]
+    indz = np.repeat(np.arange(nz), 2)[1:-1]
+
+    # lines parallel to x-axis
+    for k in range(nz):
+        for j in range(ny):
+            ind = [i + j * nx + k * nx * ny for i in indx]
+            indicies.extend(ind)
+
+    # lines parallel to y-axis
+    for k in range(nz):
+        for i in range(nx):
+            ind = [i + j * nx + k * nx * ny for j in indy]
+            indicies.extend(ind)
+
+    # lines parallel to z-axis
+    for j in range(ny):
+        for i in range(nx):
+            ind = [i + j * nx + k * nx * ny for k in indz]
+            indicies.extend(ind)
+
+    return indicies

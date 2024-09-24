@@ -5,19 +5,15 @@ main gui for cmm error map app
 
 import pyqtgraph as pg
 
-# import pyqtgraph.opengl as gl
 import pyqtgraph.Qt.QtWidgets as qtw
 from pyqtgraph.Qt.QtCore import Qt as qtc
 import pyqtgraph.Qt.QtGui as qtg
 
 import qdarktheme
 
-# from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-
-import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.gui_cmpts as gc
 import cmm_error_map.data_cmpts as dc
 
@@ -98,13 +94,12 @@ class MainWindow(qtw.QMainWindow):
         )
         axes = [x_axis, y_axis, z_axis, squareness]
 
-        for p in design.modelparameters:
-            # the 2nd entry in the modelparmeters is the dependent axis
-            axes[p[1]].addChild(
+        for key, axis in gc.axis_group.items():
+            axes[axis].addChild(
                 dict(
                     type="slider",
-                    name=p[0],
-                    title=p[0],
+                    name=key,
+                    title=key,
                     limits=[-5.0, 5.0],
                     step=0.1,
                     value=0,
@@ -123,11 +118,11 @@ class MainWindow(qtw.QMainWindow):
         """
         control_name = changes[0][0].name()
         slider_value = changes[0][2]
-        if control_name in design.model_parameters_dict.keys():
+        if control_name in dc.model_parameters_dict.keys():
             slider_factor = gc.slider_factors[control_name]
             self.machine.model_params[control_name] = slider_value * slider_factor
         elif control_name == "btn_reset_all":
-            self.machine.model_params = design.model_parameters_dict.copy()
+            self.machine.model_params = dc.model_parameters_dict.copy()
             # update sliders
             with self.slider_group.treeChangeBlocker():
                 for axis_group in self.slider_group.children():
@@ -166,15 +161,38 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.probes from gui controls in self.probes_group
         """
         self.machine.probes = {}
+        spacing = self.machine.cmm_model.box_spacing
+        size = self.machine.cmm_model.size
+        npts = (
+            int(size[0] // spacing[0]) + 1,
+            int(size[1] // spacing[1]) + 1,
+            int(size[2] // spacing[2]) + 1,
+        )
+
         for probe_child in self.prb_group.children():
             probe_name = probe_child.name()
             grp_probe = probe_child.child("grp_probe_lengths")
             vprobe = [grand_kid.value() for grand_kid in grp_probe]
             probe_vec = qtg.QVector3D(*vprobe)
             probe = dc.Probe(
-                title=probe_child.title(), name=probe_child.name(), length=probe_vec
+                title=probe_child.title(),
+                name=probe_child.name(),
+                length=probe_vec,
             )
             self.machine.probes[probe_name] = probe
+            # also create box deformation object
+
+            box = dc.BoxGrid(
+                title=probe_child.title(),
+                name=probe_name,
+                spacing=spacing,
+                npts=npts,
+                probe=probe,
+                xyz3d=None,
+                dev3d=None,
+            )
+
+            self.machine.boxes[probe_name] = box
         self.replot()
 
     def make_measurement_controls(self) -> Parameter:

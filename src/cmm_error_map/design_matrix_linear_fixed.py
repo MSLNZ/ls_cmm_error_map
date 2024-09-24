@@ -12,55 +12,6 @@
 import numpy as np
 
 
-model_parameters_dict = {
-    "Txx": 0.0,
-    "Txy": 0.0,
-    "Txz": 0.0,
-    "Tyx": 0.0,
-    "Tyy": 0.0,
-    "Tyz": 0.0,
-    "Tzx": 0.0,
-    "Tzy": 0.0,
-    "Tzz": 0.0,
-    "Rxx": 0.0,
-    "Rxy": 0.0,
-    "Rxz": 0.0,
-    "Ryx": 0.0,
-    "Ryy": 0.0,
-    "Ryz": 0.0,
-    "Rzx": 0.0,
-    "Rzy": 0.0,
-    "Rzz": 0.0,
-    "Wxy": 0.0,
-    "Wxz": 0.0,
-    "Wyz": 0.0,
-}
-
-# some non-zero parmeters for quick tests
-model_parameters_test = {
-    "Txx": 1.33e-05,
-    "Txy": 0.0,
-    "Txz": 0.0,
-    "Tyx": -1.12e-05,
-    "Tyy": -5.09e-06,
-    "Tyz": 0.0,
-    "Tzx": 2.6e-05,
-    "Tzy": 4.6e-06,
-    "Tzz": 3.34e-08,
-    "Rxx": 7.49e-09,
-    "Rxy": 1.54e-08,
-    "Rxz": 5e-09,
-    "Ryx": -4.58e-09,
-    "Ryy": -1.43e-08,
-    "Ryz": 2.19e-08,
-    "Rzx": 2.49e-09,
-    "Rzy": -7.94e-10,
-    "Rzz": 4.78e-08,
-    "Wxy": 0.0,
-    "Wxz": 0.0,
-    "Wyz": 0.0,
-}
-
 ballspacing = 133.0
 posinfo = [
     (1, "XY high", "X", "Y", 9, 10, 11, 4.76412, -193.69498, -355.41323, 0, 1, 2, 2),
@@ -269,24 +220,24 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params, ballspacing=133.0, nballs=(5, 5)):
     return xy2d.T, dev2d.T
 
 
-def machine_deformation(params, xt, yt, zt, spacing=200):
+def machine_deformation(params, xt, yt, zt, spacing=200, size=(800, 600, 600)):
     """
     takes a set of 21 params and generates an evenly spaced grid over machine volume
     returns nominal and error as 3D arrays
     """
 
-    nx = 800 // spacing + 1
-    ny = 600 // spacing + 1
-    nz = 600 // spacing + 1
+    nx = size[0] // spacing + 1
+    ny = size[1] // spacing + 1
+    nz = size[2] // spacing + 1
     npoints = nx * ny * nz
 
     # generate set of x,y,z values and error values over space of machine
     XYZ = np.zeros((npoints, 3))
     eXYZ = np.zeros((npoints, 3))
     i = 0
-    for x in np.arange(0, 801, spacing):
-        for y in np.arange(0, 601, spacing):
-            for z in np.arange(0, 601, spacing):
+    for x in np.arange(0, size[0] + 1, spacing):
+        for y in np.arange(0, size[1] + 1, spacing):
+            for z in np.arange(0, size[2] + 1, spacing):
                 XYZ[i, :] = x, y, z
                 eXYZ[i, :] = model_linear(x, y, z, params, xt, yt, zt)
                 i = i + 1

@@ -26,27 +26,12 @@ mmt = dc.Measurement(
     xyz3d=None,
     dev3d=None,
 )
-mmt.artefact.nballs = (5, 5)
+mmt.artefact.nballs = (5, 4)
 model_params = design.model_parameters_dict.copy()
 mmt.recalculate(model_params)
 
-# print(f"{mmt.xyz3d.shape=}")
-# print(f"{mmt.xyz3d=}")
-
-box = dc.BoxGrid(
-    title="box0",
-    name="box0",
-    npts=(5, 4, 4),
-    spacing=(200.0, 200.0, 200.0),
-    probe=p0,
-    xyz3d=None,
-    dev3d=None,
-)
-box.recalculate(model_params)
-print(f"{box.xyz3d}")
-
-box_lines = gc.plot3d_box(w, box, col="green")
-balls, plate_lines = gc.plot3d_plate(w, mmt)
+box_lines = gc.plot3d_box(w, col="green")
 gc.plot3d_axis(w)
+balls, plate_lines = gc.plot3d_plate(w, mmt)
 w.show()
 pg.exec()
