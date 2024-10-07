@@ -111,10 +111,10 @@ class BoxGrid:
     npts: (int, int, int)
     spacing: (float, float, float)
     probe: Probe
-    xyz3d: np.array
-    dev3d: np.array
+    xyz3d: np.array  # (n, 3)
+    dev3d: np.array  # (n, 3)
 
-    def recalculate(self, model_params):
+    def recalculate(self, model_params: dict[str, float]):
         """
         update data with new model_parameters
         """
@@ -133,12 +133,12 @@ class Measurement:
     artefact: ArtefactType
     transform3d: pg.Transform3D
     probe: Probe
-    xy2d: np.ndarray
-    dev2d: np.ndarray
-    xyz3d: np.ndarray
-    dev3d: np.ndarray
+    xy2d: np.ndarray  # (n, 2)
+    dev2d: np.ndarray  # (n, 2)
+    xyz3d: np.ndarray  # (n, 3)
+    dev3d: np.ndarray  # (n, 3)
 
-    def recalculate(self, model_params):
+    def recalculate(self, model_params: dict[str, float]):
         """
         update data with new model_parameters
         """

@@ -4,14 +4,12 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-# import pyqtgraph.Qt.QtWidgets as qtw
+
 from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyqtgraph.Qt.QtCore import Qt as qtc
-# import pyqtgraph.Qt.QtGui as qtg
 
-# import cmm_error_map.design_matrix_linear_fixed as design
 import cmm_error_map.data_cmpts as dc
 
 slider_factors = {
