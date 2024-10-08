@@ -17,12 +17,14 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import cmm_error_map.gui_cmpts as gc
 import cmm_error_map.data_cmpts as dc
+import cmm_error_map.config.config as cf
 
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.machine = dc.pmm_866
+        self.cmm_models = cf.cmm_models
 
         # list of added 2d plots
         self.plot2d_docks = []
@@ -37,12 +39,14 @@ class MainWindow(qtw.QMainWindow):
         self.make_model_sliders()
         self.make_probe_controls()
         self.make_measurement_controls()
+        self.make_machine_controls()
 
         self.control_group = Parameter.create(type="group", name="main_controls")
 
-        self.control_group.addChild(self.slider_group)
-        self.control_group.addChild(self.mmt_group)
+        self.control_group.addChild(self.machine_group)
         self.control_group.addChild(self.prb_group)
+        self.control_group.addChild(self.mmt_group)
+        self.control_group.addChild(self.slider_group)
 
         # other controls
         btn_plot = self.control_group.addChild(
@@ -76,22 +80,52 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
 
+    def make_machine_controls(self):
+        limits = list(self.cmm_models.keys())
+        self.machine_group = Parameter.create(
+            type="list",
+            title="Machine",
+            name="machine",
+            limits=limits,
+        )
+        self.machine_group.sigTreeStateChanged.connect(self.update_machine)
+
+    def update_machine(self):
+        self.machine = dc.Machine(
+            cmm_model=self.cmm_models[self.machine_group.value()],
+            boxes={},
+            measurements={},
+            probes={},
+            model_params={},
+        )
+        # read model, mesurement, and probes from gui
+        axis_children = ["x_axis", "y_axis", "z_axis", "squareness"]
+        for control_name, axis_id in gc.axis_group.items():
+            slider_factor = gc.slider_factors[control_name]
+            axis_group = self.slider_group.child(axis_children[axis_id])
+            slider_value = axis_group.child(control_name).value()
+            self.machine.model_params[control_name] = slider_value * slider_factor
+
+        # this will call replot twice - optimize if needed
+        self.update_probes()
+        self.update_measurements()
+
     def make_model_sliders(self) -> Parameter:
         # create sliders
         self.slider_group = Parameter.create(
             type="group", title="Linear Model", name="linear_model"
         )
         x_axis = self.slider_group.addChild(
-            dict(type="group", name="X axis", expanded=False)
+            dict(type="group", title="X axis", name="x_axis", expanded=False)
         )
         y_axis = self.slider_group.addChild(
-            dict(type="group", name="Y axis", expanded=False)
+            dict(type="group", title="Y axis", name="y_axis", expanded=False)
         )
         z_axis = self.slider_group.addChild(
-            dict(type="group", name="Z axis", expanded=False)
+            dict(type="group", title="Z axis", name="z_axis", expanded=False)
         )
         squareness = self.slider_group.addChild(
-            dict(type="group", name="Squareness", expanded=False)
+            dict(type="group", title="Squareness", name="squareness", expanded=False)
         )
         axes = [x_axis, y_axis, z_axis, squareness]
 

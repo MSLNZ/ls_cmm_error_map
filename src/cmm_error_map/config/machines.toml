@@ -1,0 +1,45 @@
+[PMM866]
+title = "PMM866"
+size = [
+    800,
+    600,
+    600,
+]
+fixed_table = false
+bridge_axis = 1
+box_spacing = [
+    200.0,
+    200.0,
+    200.0,
+]
+
+[Legex574]
+title = "Legex574"
+size = [
+    500,
+    700,
+    400,
+]
+fixed_table = false
+bridge_axis = 0
+box_spacing = [
+    100.0,
+    100.0,
+    100.0,
+]
+
+[Hexagon_Global]
+title = "Hexagon_Global"
+size = [
+    1200,
+    2200,
+    1000,
+]
+fixed_table = true
+bridge_axis = 0
+box_spacing = [
+    200.0,
+    200.0,
+    200.0,
+]
+

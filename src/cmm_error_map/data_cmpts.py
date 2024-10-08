@@ -245,6 +245,20 @@ default_artefacts = {
 }
 
 
+legex574 = Machine(
+    cmm_model=MachineType(
+        title="Legex574",
+        size=(500, 700, 400),
+        fixed_table=False,
+        bridge_axis=0,
+        box_spacing=(100.0, 100.0, 100.0),
+    ),
+    boxes={},
+    measurements={},
+    probes={},
+    model_params=model_parameters_dict.copy(),
+)
+
 pmm_866 = Machine(
     cmm_model=MachineType(
         title="PMM866",
