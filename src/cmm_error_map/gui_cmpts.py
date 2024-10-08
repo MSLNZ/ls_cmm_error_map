@@ -87,8 +87,8 @@ def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
     """
 
     ind = grid_line_index(box.npts)
-    pts = box.xyz3d[ind] + mag * box.dev3d[ind]
-    gridlines.setData(pos=pts)
+    pts = box.grid_nominal[:, ind] + mag * box.grid_dev[:, ind]
+    gridlines.setData(pos=pts.T)
 
 
 def plot3d_plate(
@@ -124,17 +124,16 @@ def update_plot3d_plate(
     takes the 3d plate position data mmt from mmt applies the magnifiacation
     and sets the data in balls and lines
     """
-    xyz = mmt.xyz3d + magnification * mmt.dev3d
-    balls.setData(pos=xyz)
+    xyz = mmt.cmm_nominal + magnification * mmt.cmm_dev
+    balls.setData(pos=xyz.T)
 
-    nx = mmt.artefact.nballs[0]
-    ny = mmt.artefact.nballs[1]
+    nx, ny = mmt.artefact.nballs
     ind = np.arange(nx * ny).reshape((ny, nx))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
     ind_lines = np.hstack((indx, indy))
-    pos = xyz[ind_lines, :]
-    lines.setData(pos=pos)
+    pos = xyz[:, ind_lines]
+    lines.setData(pos=pos.T)
 
 
 # used to assign controls to axis groups
@@ -439,17 +438,16 @@ def update_plot2d_plate(
     mmt: dc.Measurement,
     magnification: float,
 ):
-    xy = mmt.xy2d + magnification * mmt.dev2d
-    balls.setData(xy)
+    xy = mmt.mmt_nominal + magnification * mmt.mmt_dev
+    balls.setData(xy[:2, :].T)
 
-    nx = mmt.artefact.nballs[0]
-    ny = mmt.artefact.nballs[1]
+    nx, ny = mmt.artefact.nballs
     ind = np.arange(nx * ny).reshape((ny, nx))
     indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
     indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
     ind_lines = np.hstack((indx, indy))
-    pos = xy[ind_lines, :]
-    lines.setData(pos)
+    pos = xy[:2, ind_lines]
+    lines.setData(pos.T)
 
 
 class Plot2dDock(Dock):
@@ -560,38 +558,6 @@ def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
     mat.rotate(vrot[1], 0.0, 1.0, 0.0)
     mat.rotate(vrot[0], 1.0, 0.0, 0.0)
     return mat
-
-
-def old_grid_line_indicies(size=(5, 4, 4)):
-    """
-    produce an array of indicies (n, 3)
-    where each pair of indices represents a line in th 3d grid
-    plotting the box deformation
-    """
-    nx, ny, nz = size
-    indicies = []
-    indx = np.repeat(np.arange(nx), 2)[1:-1]
-    indy = np.repeat(np.arange(ny), 2)[1:-1]
-    indz = np.repeat(np.arange(nz), 2)[1:-1]
-
-    # lines parallel to x-axis
-    for k in range(nz):
-        for j in range(ny):
-            ind = [[i, j, k] for i in indx]
-            indicies.extend(ind)
-
-    # lines parallel to y-axis
-    for k in range(nz):
-        for i in range(nx):
-            ind = [[i, j, k] for j in indy]
-            indicies.extend(ind)
-
-    # lines parallel to z-axis
-    for j in range(ny):
-        for i in range(nx):
-            ind = [[i, j, k] for k in indz]
-            indicies.extend(ind)
-    return np.array(indicies)
 
 
 def grid_line_index(size=(5, 4, 4)):

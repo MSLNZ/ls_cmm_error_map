@@ -24,10 +24,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-import pyqtgraph as pg
-import pyqtgraph.Qt.QtGui as qtg
-
-import cmm_error_map.design_matrix_linear_fixed as design
+import cmm_error_map.design_linear as design
 
 model_parameters_dict = {
     "Txx": 0.0,
@@ -100,7 +97,7 @@ class ArtefactType:
 class Probe:
     title: str
     name: str
-    length: qtg.QVector3D
+    length: np.ndarray  # (3,)
 
 
 # for drawing the box deformation
@@ -111,19 +108,29 @@ class BoxGrid:
     npts: (int, int, int)
     spacing: (float, float, float)
     probe: Probe
-    xyz3d: np.array  # (n, 3)
-    dev3d: np.array  # (n, 3)
+    grid_nominal: np.array  # (3, n)
+    grid_dev: np.array  # (3, n)
 
-    def recalculate(self, model_params: dict[str, float]):
+    def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
         """
         update data with new model_parameters
         """
-        self.xyz3d, self.dev3d = data_plot3d_box(
+        nx, ny, nz = self.npts
+        sx, sy, sz = self.spacing
+        pnts_range = np.arange(nx * ny * nz)
+        x = (pnts_range % nx) * sx
+        y = (pnts_range // nx % ny) * sy
+        z = (pnts_range // nx // ny) * sz
+        self.grid_nominal = np.stack((x, y, z))
+
+        dev3d = design.linear_model_matrix(
+            self.grid_nominal.T,
             self.probe.length,
             model_params,
-            self.npts,
-            self.spacing,
+            cmm_model.fixed_table,
+            cmm_model.bridge_axis,
         )
+        self.grid_dev = dev3d.T
 
 
 @dataclass
@@ -131,37 +138,71 @@ class Measurement:
     title: str
     name: str
     artefact: ArtefactType
-    transform3d: pg.Transform3D
+    transform_mat: np.ndarray  # (4, 4)
     probe: Probe
-    xy2d: np.ndarray  # (n, 2)
-    dev2d: np.ndarray  # (n, 2)
-    xyz3d: np.ndarray  # (n, 3)
-    dev3d: np.ndarray  # (n, 3)
+    cmm_nominal: np.ndarray  # (3, n) the nominal position of the balls in CMM CSY
+    cmm_dev: np.ndarray  # (3, n) the deformed - nominal position in CMM CSY
+    mmt_nominal: np.ndarray  # (3, n) the nominal position of the balls in artefact CSY
+    mmt_dev: np.ndarray  # (3, n) the deformed - nominal position in artefact CSY
 
-    def recalculate(self, model_params: dict[str, float]):
+    def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
         """
         update data with new model_parameters
         """
-        pars = list(model_params.values())
+        # nominal position of plate in plate CSY
+        nx, ny = self.artefact.nballs
+        ball_range = np.arange(nx * ny)
+        x = (ball_range) % nx * self.artefact.ball_spacing
+        y = (ball_range) // nx * self.artefact.ball_spacing
+        z = (ball_range) * 0.0
+        self.mmt_nominal = np.vstack((x, y, z))
+        mmt_nominal1 = np.vstack((x, y, z, np.ones((1, x.shape[0]))))
 
-        RP = self.transform3d.matrix()
-        xt, yt, zt = self.probe.length.x(), self.probe.length.y(), self.probe.length.z()
+        # nominal position of plate in CMM CSY
+        cmm_nominal1 = self.transform_mat @ mmt_nominal1
+        self.cmm_nominal = cmm_nominal1[:3, :]
 
-        self.xy2d, self.dev2d = design.modelled_mmts_XYZ(
-            RP,
-            xt,
-            yt,
-            zt,
-            pars,
-            ballspacing=self.artefact.ball_spacing,
-            nballs=self.artefact.nballs,
-        )
-        self.xyz3d, self.dev3d = data_plot3d_plate(
-            self.artefact,
+        # deformed position of plate relative to nominal - in CMM CSY
+        cmm_dev = design.linear_model_matrix(
+            self.cmm_nominal.T,
             self.probe.length,
             model_params,
-            self.transform3d,
+            cmm_model.fixed_table,
+            cmm_model.bridge_axis,
         )
+        self.cmm_dev = cmm_dev.T
+
+        # plate nominal in plate CSY
+        cmm_deform = self.cmm_nominal + self.cmm_dev
+
+        # calculate matrix to transform to plate CSY
+        # origin point ball 0
+        # z-plane through balls 0, 4, 20
+        # x-axis through balls 0, 4
+        xindex = nx - 1
+        yindex = nx * (ny - 1)
+        xyz0 = cmm_deform[:, 0]
+        vx = cmm_deform[:, xindex] - xyz0
+        vy = cmm_deform[:, yindex] - xyz0
+
+        vx = vx / np.linalg.norm(vx)
+        vy = vy / np.linalg.norm(vy)
+        vz = np.cross(vx, vy)
+        vz = vz / np.linalg.norm(vz)
+
+        mat = np.array(
+            [
+                [vx[0], vy[0], vz[0], xyz0[0]],
+                [vx[1], vy[1], vz[1], xyz0[1]],
+                [vx[2], vy[2], vz[2], xyz0[2]],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
+
+        inv_mat = np.linalg.inv(mat)
+        cmm_deform1 = np.vstack((cmm_deform, np.ones((1, x.shape[0]))))
+        plate1 = inv_mat @ cmm_deform1
+        self.mmt_dev = plate1[:3, :] - self.mmt_nominal
 
 
 @dataclass
@@ -177,9 +218,9 @@ class Machine:
         update all measurement data
         """
         for mmt in self.measurements.values():
-            mmt.recalculate(self.model_params)
+            mmt.recalculate(self.model_params, self.cmm_model)
         for box in self.boxes.values():
-            box.recalculate(self.model_params)
+            box.recalculate(self.model_params, self.cmm_model)
 
 
 # defaults
@@ -217,72 +258,3 @@ pmm_866 = Machine(
     probes={},
     model_params=model_parameters_dict.copy(),
 )
-
-
-def data_plot3d_plate(
-    artefact: ArtefactType,
-    prb_length: qtg.QVector3D,
-    model_params: dict[str, float],
-    transform3d: pg.Transform3D,
-) -> (np.ndarray, np.ndarray):
-    """
-    calulates the nominal position xyz of the
-    plate given by artefact,
-    at the position defined by transform3d,
-    using probe
-    and the deviation from nominal xyz_dev
-    for the plate deformed by model_params
-    returns 2 (n,3) np.ndarray
-    """
-    ball_range = np.arange(artefact.nballs[0] * artefact.nballs[1])
-    x = (ball_range) % artefact.nballs[0] * artefact.ball_spacing
-    y = (ball_range) // artefact.nballs[0] * artefact.ball_spacing
-    z = (ball_range) * 0.0
-    xyz = np.stack((x, y, z))
-    xyz = transform3d.map(xyz)
-    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
-
-    xE, yE, zE = design.model_linear(
-        xyz[0, :],
-        xyz[1, :],
-        xyz[2, :],
-        list(model_params.values()),
-        xt,
-        yt,
-        zt,
-    )
-    xyz_dev = np.stack((xE, yE, zE))
-    return xyz.T, xyz_dev.T
-
-
-def data_plot3d_box(
-    prb_length: qtg.QVector3D,
-    model_params: dict[str, float],
-    npts=(5, 4, 4),
-    spacing=(200.0, 200.0, 200.0),
-) -> (np.ndarray, np.ndarray):
-    """
-    calulates the nominal position xyz of a box
-    with npts on each axis seperated by spacing,
-    using probe
-    and the deviation from nominal xyz_dev
-    for the plate deformed by model_params
-    returns 2 (n,3) np.ndarray
-    """
-    pnts_range = np.arange(npts[0] * npts[1] * npts[2])
-    x = (pnts_range % npts[0]) * spacing[0]
-    y = (pnts_range // npts[0] % npts[1]) * spacing[1]
-    z = (pnts_range // npts[0] // npts[1]) * spacing[2]
-    xyz = np.stack((x, y, z))
-    xt, yt, zt = prb_length.x(), prb_length.y(), prb_length.z()
-    xE, yE, zE = design.model_linear(
-        xyz[0, :],
-        xyz[1, :],
-        xyz[2, :],
-        list(model_params.values()),
-        xt,
-        yt,
-        zt,
-    )
-    xyz_dev = np.stack((xE, yE, zE))
-    return xyz.T, xyz_dev.T

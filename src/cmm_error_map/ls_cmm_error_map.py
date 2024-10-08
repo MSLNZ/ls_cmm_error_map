@@ -3,11 +3,12 @@ main gui for cmm error map app
 0oOilL1I| 0123456789
 """
 
+import numpy as np
 import pyqtgraph as pg
 
 import pyqtgraph.Qt.QtWidgets as qtw
 from pyqtgraph.Qt.QtCore import Qt as qtc
-import pyqtgraph.Qt.QtGui as qtg
+# import pyqtgraph.Qt.QtGui as qtg
 
 import qdarktheme
 
@@ -173,7 +174,7 @@ class MainWindow(qtw.QMainWindow):
             probe_name = probe_child.name()
             grp_probe = probe_child.child("grp_probe_lengths")
             vprobe = [grand_kid.value() for grand_kid in grp_probe]
-            probe_vec = qtg.QVector3D(*vprobe)
+            probe_vec = np.array(vprobe)
             probe = dc.Probe(
                 title=probe_child.title(),
                 name=probe_child.name(),
@@ -188,8 +189,8 @@ class MainWindow(qtw.QMainWindow):
                 spacing=spacing,
                 npts=npts,
                 probe=probe,
-                xyz3d=None,
-                dev3d=None,
+                grid_nominal=None,
+                grid_dev=None,
             )
 
             self.machine.boxes[probe_name] = box
@@ -243,19 +244,19 @@ class MainWindow(qtw.QMainWindow):
             vloc = [grand_kid.value() for grand_kid in grp_loc]
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
-            transform3d = gc.vec_to_transform3d(vloc, vrot)
+            transform3d = gc.vec_to_transform3d(vloc, vrot).matrix()
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mmt = dc.Measurement(
                 title=mmt_child.title(),
                 name=mmt_child.name(),
                 artefact=artefact,
-                transform3d=transform3d,
+                transform_mat=transform3d,
                 probe=probe,
-                xy2d=None,
-                dev2d=None,
-                xyz3d=None,
-                dev3d=None,
+                cmm_nominal=None,
+                cmm_dev=None,
+                mmt_nominal=None,
+                mmt_dev=None,
             )
             self.machine.measurements[mmt_name] = mmt
 

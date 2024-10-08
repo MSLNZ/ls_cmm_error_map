@@ -150,3 +150,6 @@ def linear_model_point(
     dev3d = w - xyz_in - xyzt
 
     return dev3d
+
+    def plate_measurement():
+        pass
