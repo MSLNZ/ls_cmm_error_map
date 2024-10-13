@@ -87,6 +87,7 @@ class MainWindow(qtw.QMainWindow):
             title="Machine",
             name="machine",
             limits=limits,
+            value=limits[0],
         )
         self.machine_group.sigTreeStateChanged.connect(self.update_machine)
 
