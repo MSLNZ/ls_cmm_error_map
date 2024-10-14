@@ -108,6 +108,18 @@ def plot3d_plate(
         mmt,
         magnification=1.0,
     )
+
+    nx, ny = mmt.artefact.nballs
+    xindex = nx - 1
+    yindex = nx * (ny - 1)
+
+    cols = [1, 1, 1, 0.5] * (nx * ny)  # white
+    cols = np.array(cols).reshape(-1, 4)
+    cols[0, :] = [1.0, 0.627, 0.157, 0.5]  # orange
+    cols[xindex, :] = [1.0, 0.2, 0.322, 0.5]  # red
+    cols[yindex, :] = [0.545, 0.863, 0, 0.5]  # green
+    balls.setData(color=cols)
+
     w.addItem(balls)
     w.addItem(lines)
 
