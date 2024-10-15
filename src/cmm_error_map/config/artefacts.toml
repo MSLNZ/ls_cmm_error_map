@@ -1,0 +1,31 @@
+["KOBA 0620"]
+title = "KOBA 0620"
+nballs = [
+    5,
+    5,
+]
+ball_spacing = 133.0
+
+["KOBA 0420"]
+title = "KOBA 0420"
+nballs = [
+    5,
+    5,
+]
+ball_spacing = 83.0
+
+["KOBA 0320"]
+title = "KOBA 0320"
+nballs = [
+    5,
+    5,
+]
+ball_spacing = 60.0
+
+["Step Gauge 0600"]
+title = "Step Gauge 0600"
+nballs = [
+    61,
+    1,
+]
+ball_spacing = 10.0

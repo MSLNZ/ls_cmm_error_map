@@ -66,6 +66,7 @@ def plot3d_box(w: gl.GLViewWidget, box: dc.BoxGrid, col="white") -> gl.GLLinePlo
     produces a 3D plot of the undeformed machine ready for updating with
     deformation and magnification via update_plot_model3d
     """
+    plot3d_axis(w)
     # undeformed box
     fixed_box = gl.GLLinePlotItem(color=pg.mkColor("green"), mode="lines")
     update_plot3d_box(fixed_box, box, 1.0)
@@ -89,6 +90,7 @@ def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
     ind = grid_line_index(box.npts)
     pts = box.grid_nominal[:, ind] + mag * box.grid_dev[:, ind]
     gridlines.setData(pos=pts.T)
+    # print(f"{box=}")
 
 
 def plot3d_plate(
@@ -113,11 +115,11 @@ def plot3d_plate(
     xindex = nx - 1
     yindex = nx * (ny - 1)
 
-    cols = [1, 1, 1, 0.5] * (nx * ny)  # white
+    cols = [1, 1, 1, 0.75] * (nx * ny)  # white
     cols = np.array(cols).reshape(-1, 4)
-    cols[0, :] = [1.0, 0.627, 0.157, 0.5]  # orange
-    cols[xindex, :] = [1.0, 0.2, 0.322, 0.5]  # red
-    cols[yindex, :] = [0.545, 0.863, 0, 0.5]  # green
+    cols[0, :] = [1.0, 0.627, 0.157, 0.75]  # orange
+    cols[xindex, :] = [1.0, 0.2, 0.322, 0.75]  # red
+    cols[yindex, :] = [0.545, 0.863, 0, 0.75]  # green
     balls.setData(color=cols)
 
     w.addItem(balls)
@@ -299,10 +301,6 @@ class Plot3dDock(Dock):
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
 
-        # undeformed
-        # plot3d_box(self.plot_widget, box?, col="green")
-        plot3d_axis(self.plot_widget)
-
         self.addWidget(self.plot_widget)
 
     def add_control_tree(self):
@@ -377,15 +375,22 @@ class Plot3dDock(Dock):
         limits = [value.title for value in self.machine.measurements.values()]
         self.mmts_to_plot.setLimits(limits)
 
+    def update_machine(self, machine: dc.Machine):
+        """
+        called when the machine is changed
+        """
+        self.machine = machine
+        self.plot_widget.clear()
+        self.box_lineplot = None
+        self.plot_data = {}
+
     def replot(self):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
         """
         box = self.machine.boxes[self.probe_box.value()]
-        # print(f"{self.probe_box.value()=}")
-        # print(f"{box=}")
         if self.box_lineplot is None:
-            # haven't plotted the box deformation yet
+            # haven't plotted the box deformation yet or machine changed
             self.box_lineplot = plot3d_box(self.plot_widget, box, col="blue")
 
         update_plot3d_box(self.box_lineplot, box, self.magnification)
@@ -507,6 +512,103 @@ class Plot2dDock(Dock):
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
+
+    def update_machine(self, machine: dc.Machine):
+        self.machine = machine
+
+    def update_measurement_list(self):
+        """
+        update the displayed measurement list to match self.machine
+        """
+        limits = [value.title for value in self.machine.measurements.values()]
+        self.mmts_to_plot.setLimits(limits)
+
+    def change_plot_title(self, param):
+        """
+        event handler for a change in plot title
+        """
+        param.parent().setOpts(title=param.value())
+        # TODO add  title on plot
+
+    def change_magnification(self, control):
+        """
+        event handler for a change in magnification
+        """
+        self.magnification = control.value()
+        self.replot()
+
+    def replot(self, control=None):
+        """
+        redraw existing plots and add new ones from data in self.machine.measurements
+        """
+
+        for mmt_name, mmt in self.machine.measurements.items():
+            to_plot = mmt.title in self.mmts_to_plot.value()
+            if not to_plot and mmt_name in self.plot_data:
+                # remove plotlines
+                for plot in self.plot_data[mmt_name]:
+                    self.plot_widget.removeItem(plot)
+                del self.plot_data[mmt_name]
+
+            if to_plot:
+                if mmt_name not in self.plot_data:
+                    # need a new plot
+                    self.plot_data[mmt_name] = plot2d_plate(self.plot_widget, mmt)
+
+                # update plot
+                balls, lines = self.plot_data[mmt_name]
+                update_plot2d_plate(
+                    balls,
+                    lines,
+                    mmt,
+                    self.magnification,
+                )
+
+
+class PlotBarDock(Dock):
+    """
+    a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
+    knows how to draw and update itself based on the values in parameter tree
+    """
+
+    def __init__(self, name, machine):
+        super(PlotBarDock, self).__init__(name)
+
+        self.machine = machine
+
+        self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
+        self.plot_widget = pg.PlotWidget(name=name)
+        self.plot_widget.setAspectLocked()
+        self.add_control_tree()
+
+        self.addWidget(self.plot_widget)
+
+    def add_control_tree(self):
+        """
+        adds the controls that go in the overlay at top left
+        """
+        self.plot_controls = Parameter.create(**dock2d_control_grp)
+        plot_title = self.plot_controls.child("plot_title")
+        plot_title.sigValueChanged.connect(self.change_plot_title)
+
+        self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
+        # checklist limits need to be lists and display current title
+        limits = [value.title for value in self.machine.measurements.values()]
+        self.mmts_to_plot.setLimits(limits)
+        self.mmts_to_plot.sigValueChanged.connect(self.replot)
+
+        self.tree = ParameterTree(self.plot_widget, showHeader=False)
+        self.tree.setParameters(self.plot_controls, showTop=True)
+        self.tree.setStyleSheet(
+            "background:transparent;" "border-width: 0px; border-style: solid"
+        )
+        self.tree.setFixedWidth(500)
+        self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
+        self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
+        self.tree.move(0, 0)
+
+    def update_machine(self, machine: dc.Machine):
+        self.machine = machine
 
     def update_measurement_list(self):
         """

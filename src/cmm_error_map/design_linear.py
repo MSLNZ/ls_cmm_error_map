@@ -73,7 +73,10 @@ def linear_model_point(
     """ """
     if not fixed_table:
         # table movement is in opposite direction to probe position for a moving table
-        xyz = xyz_in * [-1, 1, 1]
+        dirn = [1, 1, 1]
+        table_axis = int(not bridge_axis)
+        dirn[table_axis] = -1
+        xyz = xyz_in * dirn
     else:
         xyz = xyz_in
 

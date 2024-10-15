@@ -149,7 +149,7 @@ class Measurement:
         """
         update data with new model_parameters
         """
-        # nominal position of plate in plate CSY
+        # nominal position of plate/bar in artefact CSY
         nx, ny = self.artefact.nballs
         ball_range = np.arange(nx * ny)
         x = (ball_range) % nx * self.artefact.ball_spacing
@@ -172,37 +172,87 @@ class Measurement:
         )
         self.cmm_dev = cmm_dev.T
 
-        # plate nominal in plate CSY
         cmm_deform = self.cmm_nominal + self.cmm_dev
+        if ny == 1:
+            mmt_deform = cmm_to_bar_csy(cmm_deform, self.artefact)
+        else:
+            mmt_deform = cmm_to_plate_csy(cmm_deform, self.artefact)
 
-        # calculate matrix to transform to plate CSY
-        # origin point ball 0
-        # z-plane through balls 0, 4, 20
-        # x-axis through balls 0, 4
-        xindex = nx - 1
-        yindex = nx * (ny - 1)
-        xyz0 = cmm_deform[:, 0]
-        vx = cmm_deform[:, xindex] - xyz0
-        vy = cmm_deform[:, yindex] - xyz0
+        self.mmt_dev = mmt_deform - self.mmt_nominal
 
-        vx = vx / np.linalg.norm(vx)
-        vy = vy / np.linalg.norm(vy)
-        vz = np.cross(vx, vy)
-        vz = vz / np.linalg.norm(vz)
 
-        mat = np.array(
-            [
-                [vx[0], vy[0], vz[0], xyz0[0]],
-                [vx[1], vy[1], vz[1], xyz0[1]],
-                [vx[2], vy[2], vz[2], xyz0[2]],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        )
+def cmm_to_plate_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
+    """
+    transform cmm_deform to plate CSY
 
-        inv_mat = np.linalg.inv(mat)
-        cmm_deform1 = np.vstack((cmm_deform, np.ones((1, x.shape[0]))))
-        plate1 = inv_mat @ cmm_deform1
-        self.mmt_dev = plate1[:3, :] - self.mmt_nominal
+    origin point ball 0
+    z-plane through balls 0, 4, 20
+    x-axis through balls 0, 4
+    """
+    nx, ny = artefact.nballs
+    xindex = nx - 1
+    yindex = nx * (ny - 1)
+    xyz0 = cmm_deform[:, 0]
+    vx = cmm_deform[:, xindex] - xyz0
+    vy = cmm_deform[:, yindex] - xyz0
+
+    vx = vx / np.linalg.norm(vx)
+    vy = vy / np.linalg.norm(vy)
+    vz = np.cross(vx, vy)
+    vz = vz / np.linalg.norm(vz)
+
+    mat = np.array(
+        [
+            [vx[0], vy[0], vz[0], xyz0[0]],
+            [vx[1], vy[1], vz[1], xyz0[1]],
+            [vx[2], vy[2], vz[2], xyz0[2]],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    inv_mat = np.linalg.inv(mat)
+    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, nx * ny))))
+    mmt_deform = inv_mat @ cmm_deform1
+
+    return mmt_deform[:3, :]
+
+
+def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
+    """
+    transform cmm_deform to bar CSY
+
+    origin ball 0
+    x-axis through balls 0, nx-1
+    z-plane is through balls 0, nx-1, and ?
+    """
+    nx, ny = artefact.nballs
+    xindex = nx - 1
+    xyz0 = cmm_deform[:, 0]
+    vx = cmm_deform[:, xindex] - xyz0
+
+    # need a 3rd point/dirn not on bar line
+    vy = np.array([0, 1, 0])
+    # check bar not along vy
+    if 1 - np.dot(vx, vy) < 0.001:
+        vy = np.array([1, 0, 0])
+    vz = np.cross(vx, vy)
+    vz = vz / np.linalg.norm(vz)
+
+    mat = np.array(
+        [
+            [vx[0], vy[0], vz[0], xyz0[0]],
+            [vx[1], vy[1], vz[1], xyz0[1]],
+            [vx[2], vy[2], vz[2], xyz0[2]],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    inv_mat = np.linalg.inv(mat)
+
+    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, nx * ny))))
+    mmt_deform = inv_mat @ cmm_deform1
+
+    return mmt_deform[:3, :]
 
 
 @dataclass
@@ -224,25 +274,6 @@ class Machine:
 
 
 # defaults
-
-
-default_artefacts = {
-    "KOBA 0620": ArtefactType(
-        title="KOBA 0620",
-        nballs=(5, 5),
-        ball_spacing=133.0,
-    ),
-    "KOBA 0420": ArtefactType(
-        title="KOBA 0420",
-        nballs=(5, 5),
-        ball_spacing=83.0,
-    ),
-    "KOBA 0320": ArtefactType(
-        title="KOBA 0320",
-        nballs=(5, 5),
-        ball_spacing=60.0,
-    ),
-}
 
 
 legex574 = Machine(

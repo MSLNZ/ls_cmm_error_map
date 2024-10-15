@@ -107,6 +107,13 @@ class MainWindow(qtw.QMainWindow):
             slider_value = axis_group.child(control_name).value()
             self.machine.model_params[control_name] = slider_value * slider_factor
 
+        # update the references in the plot docks
+        if self.plot3d_dock:
+            self.plot3d_dock.update_machine(self.machine)
+
+        for dock in self.plot2d_docks:
+            dock.update_machine(self.machine)
+
         # this will call replot twice - optimize if needed
         self.update_probes()
         self.update_measurements()
@@ -227,8 +234,8 @@ class MainWindow(qtw.QMainWindow):
                 grid_nominal=None,
                 grid_dev=None,
             )
-
             self.machine.boxes[probe_name] = box
+
         self.replot()
 
     def make_measurement_controls(self) -> Parameter:
@@ -253,8 +260,8 @@ class MainWindow(qtw.QMainWindow):
             new_grp = parent.addChild(grp_params, autoIncrementName=True)
             new_grp.setOpts(title=new_title)
             new_grp.child("mmt_title").setValue(new_title)
-            new_grp.child("artefact").setLimits(list(dc.default_artefacts.keys()))
-            new_grp.child("artefact").setValue(list(dc.default_artefacts.keys())[0])
+            new_grp.child("artefact").setLimits(list(cf.artefact_models.keys()))
+            new_grp.child("artefact").setValue(list(cf.artefact_models.keys())[0])
             prb_limits = {
                 value.title: key for key, value in self.machine.probes.items()
             }
@@ -273,7 +280,7 @@ class MainWindow(qtw.QMainWindow):
 
         for mmt_child in self.mmt_group.children():
             mmt_name = mmt_child.name()
-            artefact = dc.default_artefacts[mmt_child.child("artefact").value()]
+            artefact = cf.artefact_models[mmt_child.child("artefact").value()]
 
             grp_loc = mmt_child.child("grp_location")
             vloc = [grand_kid.value() for grand_kid in grp_loc]
