@@ -27,7 +27,7 @@ class MainWindow(qtw.QMainWindow):
         self.cmm_models = cf.cmm_models
 
         # list of added 2d plots
-        self.plot2d_docks = []
+        self.plot_mmt_docks = []
         self.plot3d_dock = None
         self.setup_gui()
         self.add_startup_docks()
@@ -49,10 +49,16 @@ class MainWindow(qtw.QMainWindow):
         self.control_group.addChild(self.slider_group)
 
         # other controls
-        btn_plot = self.control_group.addChild(
-            dict(type="action", name="btn_plot", title="Add Plot Dock")
+        btn_plot2d = self.control_group.addChild(
+            dict(type="action", name="btn_plot2d", title="Add Plate Plot Dock")
         )
-        btn_plot.sigActivated.connect(self.add_new_plot2d_dock)
+        btn_plot2d.sigActivated.connect(self.add_new_plot2d_dock)
+
+        btn_plot1d = self.control_group.addChild(
+            dict(type="action", name="btn_plot1d", title="Add Bar Plot Dock")
+        )
+        btn_plot1d.sigActivated.connect(self.add_new_plot1d_dock)
+
         self.control_tree = ParameterTree(showHeader=False)
         self.control_tree.setContentsMargins(0, 0, 0, 0)
         self.control_tree.header().setStretchLastSection(True)
@@ -108,7 +114,7 @@ class MainWindow(qtw.QMainWindow):
         if self.plot3d_dock:
             self.plot3d_dock.update_machine(self.machine)
 
-        for dock in self.plot2d_docks:
+        for dock in self.plot_mmt_docks:
             dock.update_machine(self.machine)
 
         # this will call replot twice - optimize if needed
@@ -298,7 +304,7 @@ class MainWindow(qtw.QMainWindow):
             )
             self.machine.measurements[mmt_name] = mmt
 
-        for dock in self.plot2d_docks:
+        for dock in self.plot_mmt_docks:
             dock.update_measurement_list()
         if self.plot3d_dock:
             self.plot3d_dock.update_measurement_list()
@@ -340,15 +346,28 @@ class MainWindow(qtw.QMainWindow):
 
     def add_new_plot2d_dock(self):
         """
-        create a new plot dock
-        type of plot etc is set from side bar on dock
+        create a new plot dock for a ball plate
         can have lots of these
+        each dock can display multiple measurements
         """
 
         new_plot_dock = gc.PlotPlateDock("New Dock", self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
-        self.plot2d_docks.append(new_plot_dock)
+        self.plot_mmt_docks.append(new_plot_dock)
+        new_plot_dock.replot()
+
+    def add_new_plot1d_dock(self):
+        """
+        create a new plot dock for a ball bar
+        can have lots of these
+        each dock can display multiple measurements
+        """
+
+        new_plot_dock = gc.PlotBarDock("New Dock", self.machine)
+
+        self.dock_area.addDock(new_plot_dock, position="bottom")
+        self.plot_mmt_docks.append(new_plot_dock)
         new_plot_dock.replot()
 
     def recalculate(self):
@@ -358,7 +377,7 @@ class MainWindow(qtw.QMainWindow):
         self.recalculate()
         if self.plot3d_dock:
             self.plot3d_dock.replot()
-        for dock in self.plot2d_docks:
+        for dock in self.plot_mmt_docks:
             dock.replot()
 
     def add_summary(self):

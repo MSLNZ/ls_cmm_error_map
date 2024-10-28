@@ -514,8 +514,11 @@ def update_plot1d_bar(
     x = mmt.mmt_nominal[0, :]
     y = mmt.mmt_dev[0, :]
     xy = np.stack((x, y))
-    balls.setData(xy)
-    lines.setData(xy)
+    print(f"{xy[:, -1]=}")
+    balls.setData(xy.T)
+    lines.setData(xy.T)
+    print(f"{balls.dataRect()=}")
+    print(f"{lines.dataRect()=}")
 
 
 class PlotPlateDock(Dock):
@@ -632,7 +635,6 @@ class PlotBarDock(Dock):
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
-        self.plot_widget.setAspectLocked()
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
@@ -683,7 +685,7 @@ class PlotBarDock(Dock):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
-
+        print("In bar replot")
         for mmt_name, mmt in self.machine.measurements.items():
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
@@ -699,6 +701,7 @@ class PlotBarDock(Dock):
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
+                print("...updating")
                 update_plot1d_bar(
                     balls,
                     lines,
