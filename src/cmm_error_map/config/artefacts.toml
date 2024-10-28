@@ -25,7 +25,7 @@ ball_spacing = 60.0
 ["Step Gauge 0600"]
 title = "Step Gauge 0600"
 nballs = [
-    61,
+    31,
     1,
 ]
-ball_spacing = 10.0
+ball_spacing = 20.0

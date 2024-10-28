@@ -53,14 +53,11 @@ class MainWindow(qtw.QMainWindow):
             dict(type="action", name="btn_plot", title="Add Plot Dock")
         )
         btn_plot.sigActivated.connect(self.add_new_plot2d_dock)
-
         self.control_tree = ParameterTree(showHeader=False)
         self.control_tree.setContentsMargins(0, 0, 0, 0)
         self.control_tree.header().setStretchLastSection(True)
         self.control_tree.header().setMinimumSectionSize(100)
-
         self.control_tree.setParameters(self.control_group, showTop=False)
-
         v_split = qtw.QSplitter(qtc.Vertical)
         v_split.addWidget(self.control_tree)
         v_split.addWidget(self.summary)
@@ -224,7 +221,6 @@ class MainWindow(qtw.QMainWindow):
             )
             self.machine.probes[probe_name] = probe
             # also create box deformation object
-
             box = dc.BoxGrid(
                 title=probe_child.title(),
                 name=probe_name,
@@ -348,7 +344,9 @@ class MainWindow(qtw.QMainWindow):
         type of plot etc is set from side bar on dock
         can have lots of these
         """
-        new_plot_dock = gc.Plot2dDock("New Dock", self.machine)
+
+        new_plot_dock = gc.PlotPlateDock("New Dock", self.machine)
+
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot2d_docks.append(new_plot_dock)
         new_plot_dock.replot()

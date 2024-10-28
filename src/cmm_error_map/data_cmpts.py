@@ -229,6 +229,7 @@ def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
     xindex = nx - 1
     xyz0 = cmm_deform[:, 0]
     vx = cmm_deform[:, xindex] - xyz0
+    vx = vx / np.linalg.norm(vx)
 
     # need a 3rd point/dirn not on bar line
     vy = np.array([0, 1, 0])

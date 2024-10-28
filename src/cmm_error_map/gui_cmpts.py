@@ -430,6 +430,27 @@ dock2d_control_grp = {
     ],
 }
 
+dock1d_control_grp = {
+    "title": "▼",
+    "name": "plot_controls",
+    "type": "group",
+    "expanded": True,
+    "children": [
+        {
+            "name": "plot_title",
+            "title": "Plot Title",
+            "type": "str",
+            "value": "Plot 0",
+        },
+        {
+            "name": "mmts_to_plot",
+            "title": "To Plot",
+            "type": "checklist",
+            "limits": [],
+        },
+    ],
+}
+
 
 def plot2d_plate(
     w: pg.PlotWidget, mmt: dc.Measurement, col="white"
@@ -467,14 +488,45 @@ def update_plot2d_plate(
     lines.setData(pos.T)
 
 
-class Plot2dDock(Dock):
+def plot1d_bar(
+    w: pg.PlotWidget, mmt: dc.Measurement, col="white"
+) -> list[pg.PlotDataItem]:
+    """
+    pyqtgraph plot of ball bar errors against position
+    basic undeformed plot
+    """
+
+    balls = pg.PlotDataItem(color=pg.mkColor(col), size=20, symbol="o", pen=None)
+    lines = pg.PlotDataItem(color=pg.mkColor(col), connect="all")
+
+    update_plot1d_bar(balls, lines, mmt)
+    w.addItem(balls)
+    w.addItem(lines)
+
+    return [balls, lines]
+
+
+def update_plot1d_bar(
+    balls: pg.PlotDataItem,
+    lines: pg.PlotDataItem,
+    mmt: dc.Measurement,
+):
+    x = mmt.mmt_nominal[0, :]
+    y = mmt.mmt_dev[0, :]
+    xy = np.stack((x, y))
+    balls.setData(xy)
+    lines.setData(xy)
+
+
+class PlotPlateDock(Dock):
     """
     a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
     knows how to draw and update itself based on the values in parameter tree
+    For 2D aretefacts such as a ball plate or hole plate
     """
 
     def __init__(self, name, machine):
-        super(Plot2dDock, self).__init__(name)
+        super(PlotPlateDock, self).__init__(name)
 
         self.magnification = 5000
         self.machine = machine
@@ -498,9 +550,7 @@ class Plot2dDock(Dock):
         slider_mag.sigValueChanged.connect(self.change_magnification)
 
         self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
-        # checklist limits need to be lists and display current title
-        limits = [value.title for value in self.machine.measurements.values()]
-        self.mmts_to_plot.setLimits(limits)
+        self.update_measurement_list()
         self.mmts_to_plot.sigValueChanged.connect(self.replot)
 
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
@@ -520,7 +570,10 @@ class Plot2dDock(Dock):
         """
         update the displayed measurement list to match self.machine
         """
-        limits = [value.title for value in self.machine.measurements.values()]
+        limits = []
+        for mmt in self.machine.measurements.values():
+            if mmt.artefact.nballs[1] > 1:
+                limits.append(mmt.title)
         self.mmts_to_plot.setLimits(limits)
 
     def change_plot_title(self, param):
@@ -569,6 +622,7 @@ class PlotBarDock(Dock):
     """
     a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
     knows how to draw and update itself based on the values in parameter tree
+    For 1D artefacts like a ball bar or step gauge
     """
 
     def __init__(self, name, machine):
@@ -587,14 +641,12 @@ class PlotBarDock(Dock):
         """
         adds the controls that go in the overlay at top left
         """
-        self.plot_controls = Parameter.create(**dock2d_control_grp)
+        self.plot_controls = Parameter.create(**dock1d_control_grp)
         plot_title = self.plot_controls.child("plot_title")
         plot_title.sigValueChanged.connect(self.change_plot_title)
 
         self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
-        # checklist limits need to be lists and display current title
-        limits = [value.title for value in self.machine.measurements.values()]
-        self.mmts_to_plot.setLimits(limits)
+        self.update_measurement_list()
         self.mmts_to_plot.sigValueChanged.connect(self.replot)
 
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
@@ -614,7 +666,10 @@ class PlotBarDock(Dock):
         """
         update the displayed measurement list to match self.machine
         """
-        limits = [value.title for value in self.machine.measurements.values()]
+        limits = []
+        for mmt in self.machine.measurements.values():
+            if mmt.artefact.nballs[1] == 1:
+                limits.append(mmt.title)
         self.mmts_to_plot.setLimits(limits)
 
     def change_plot_title(self, param):
@@ -623,13 +678,6 @@ class PlotBarDock(Dock):
         """
         param.parent().setOpts(title=param.value())
         # TODO add  title on plot
-
-    def change_magnification(self, control):
-        """
-        event handler for a change in magnification
-        """
-        self.magnification = control.value()
-        self.replot()
 
     def replot(self, control=None):
         """
@@ -647,15 +695,14 @@ class PlotBarDock(Dock):
             if to_plot:
                 if mmt_name not in self.plot_data:
                     # need a new plot
-                    self.plot_data[mmt_name] = plot2d_plate(self.plot_widget, mmt)
+                    self.plot_data[mmt_name] = plot1d_bar(self.plot_widget, mmt)
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
-                update_plot2d_plate(
+                update_plot1d_bar(
                     balls,
                     lines,
                     mmt,
-                    self.magnification,
                 )
 
 
