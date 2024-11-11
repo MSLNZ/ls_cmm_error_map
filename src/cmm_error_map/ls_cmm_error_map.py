@@ -3,6 +3,7 @@ main gui for cmm error map app
 0oOilL1I| 0123456789
 """
 
+import json
 import numpy as np
 import pyqtgraph as pg
 
@@ -18,6 +19,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import cmm_error_map.gui_cmpts as gc
 import cmm_error_map.data_cmpts as dc
 import cmm_error_map.config.config as cf
+
+DEBUG = True
 
 
 class MainWindow(qtw.QMainWindow):
@@ -52,12 +55,29 @@ class MainWindow(qtw.QMainWindow):
         btn_plot2d = self.control_group.addChild(
             dict(type="action", name="btn_plot2d", title="Add Plate Plot Dock")
         )
-        btn_plot2d.sigActivated.connect(self.add_new_plot2d_dock)
+        btn_plot2d.sigActivated.connect(self.add_new_plot_plate_dock)
 
         btn_plot1d = self.control_group.addChild(
             dict(type="action", name="btn_plot1d", title="Add Bar Plot Dock")
         )
-        btn_plot1d.sigActivated.connect(self.add_new_plot1d_dock)
+        btn_plot1d.sigActivated.connect(self.add_new_plot_bar_dock)
+
+        btn_save_state = self.control_group.addChild(
+            dict(type="action", name="btn_save_state", title="Save Configuration")
+        )
+        btn_save_state.sigActivated.connect(self.save_state)
+
+        btn_restore_state = self.control_group.addChild(
+            dict(type="action", name="btn_restore_state", title="Restore Configuration")
+        )
+        btn_restore_state.sigActivated.connect(self.restore_state)
+
+        # button for debug purposes
+        if DEBUG:
+            btn_debug = self.control_group.addChild(
+                dict(type="action", name="btn_debug", title="DO NOT PUSH ME")
+            )
+            btn_debug.sigActivated.connect(self.btn_debug)
 
         self.control_tree = ParameterTree(showHeader=False)
         self.control_tree.setContentsMargins(0, 0, 0, 0)
@@ -344,27 +364,30 @@ class MainWindow(qtw.QMainWindow):
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
 
-    def add_new_plot2d_dock(self):
+    def add_new_plot_plate_dock(self, _parameter, name=None):
         """
         create a new plot dock for a ball plate
         can have lots of these
         each dock can display multiple measurements
         """
-
-        new_plot_dock = gc.PlotPlateDock("New Dock", self.machine)
+        if name is None:
+            name = f"plate{len(self.plot_mmt_docks)}"
+        print(f"{name=}")
+        new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot_mmt_docks.append(new_plot_dock)
         new_plot_dock.replot()
 
-    def add_new_plot1d_dock(self):
+    def add_new_plot_bar_dock(self, _parameter, name=None):
         """
         create a new plot dock for a ball bar
         can have lots of these
         each dock can display multiple measurements
         """
-
-        new_plot_dock = gc.PlotBarDock("New Dock", self.machine)
+        if name is None:
+            name = f"bar{len(self.plot_mmt_docks)}"
+        new_plot_dock = gc.PlotBarDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot_mmt_docks.append(new_plot_dock)
@@ -380,22 +403,102 @@ class MainWindow(qtw.QMainWindow):
         for dock in self.plot_mmt_docks:
             dock.replot()
 
+    def save_state(self):
+        filename, _ = qtw.QFileDialog.getSaveFileName(
+            self, "Save File", filter="config files (*.json)"
+        )
+
+        if not filename:
+            return
+
+        state_dict = {}
+        state_dict["main_state"] = self.control_group.saveState(filter="user")
+        state_dict["dock_area"] = self.dock_area.saveState()
+        state_dict["docks"] = {}
+
+        for dock in self.plot_mmt_docks:
+            state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
+                filter="user"
+            )
+
+        with open(filename, "w") as fp:
+            json.dump(state_dict, fp)
+
+    def restore_state(self):
+        filename, _ = qtw.QFileDialog.getOpenFileName(
+            self, filter="config files (*.json)"
+        )
+        if not filename:
+            return
+
+        with open(filename, "r") as fp:
+            state_dict = json.load(fp)
+
+        # remove any existing docks
+        for dock in self.plot_mmt_docks:
+            dock.close()
+            del dock
+
+        self.plot_mmt_docks = []
+
+        self.control_group.restoreState(state_dict["main_state"])
+        for dock_name, dock_state in state_dict["docks"].items():
+            if dock_name[0] == "p":
+                self.add_new_plot_plate_dock(None, name=dock_name)
+                self.plot_mmt_docks[-1].plot_controls.restoreState(dock_state)
+
+            elif dock_name[0] == "b":
+                self.add_new_plot_bar_dock(name=dock_name)
+                self.plot_mmt_docks[-1].plot_controls.restoreState(dock_state)
+            else:
+                raise ValueError("Unknown dock type")
+
+        self.dock_area.restoreState(state_dict["dock_area"])
+
     def add_summary(self):
         text = "Summary\n"
         text += "-------\n\n"
         text += "Use this area for summary or user info"
         self.summary.setPlainText(text)
 
+    def btn_debug(self):
+        """
+        print useful stuff here
+        or add to  summary etc.
+        """
+        c, d = self.dock_area.findAll()
+        for item in c:
+            print(item)
+            print()
+
+        for key, value in d.items():
+            print(key)
+            print(value)
+            print()
+
 
 def main():
     _app = pg.mkQApp("CMM Error Map App")
+
+    qss = """
+    QPushButton {
+        border-color: #8d604c;
+    }
+    """
+
     qdarktheme.setup_theme(
         "dark",
-        custom_colors={"primary": "#f07845", "list.alternateBackground": "#202124"},
+        custom_colors={
+            "primary": "#f07845",
+            "list.alternateBackground": "#202124",
+            "primary>button.hoverBackground": "#42444a",
+        },
+        additional_qss=qss,
     )
 
     w = MainWindow()
     # app.setStyleSheet("QCheckBox { padding: 5px }")
+    # _app.setStyleSheet("QPushButton { background: red }")
     w.showMaximized()
     w.show()
 

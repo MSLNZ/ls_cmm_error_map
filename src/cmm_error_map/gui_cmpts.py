@@ -529,10 +529,11 @@ class PlotPlateDock(Dock):
     """
 
     def __init__(self, name, machine):
-        super(PlotPlateDock, self).__init__(name)
+        super(PlotPlateDock, self).__init__(name, closable=True)
 
         self.magnification = 5000
         self.machine = machine
+        self.dock_name = name
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
@@ -629,9 +630,10 @@ class PlotBarDock(Dock):
     """
 
     def __init__(self, name, machine):
-        super(PlotBarDock, self).__init__(name)
+        super(PlotBarDock, self).__init__(name, closable=True)
 
         self.machine = machine
+        self.dock_name = name
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
