@@ -31,6 +31,7 @@ class MainWindow(qtw.QMainWindow):
 
         # list of added 2d plots
         self.plot_mmt_docks = []
+        self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
         self.add_startup_docks()
@@ -131,10 +132,14 @@ class MainWindow(qtw.QMainWindow):
             self.machine.model_params[control_name] = slider_value * slider_factor
 
         # update the references in the plot docks
-        if self.plot3d_dock:
-            self.plot3d_dock.update_machine(self.machine)
+        # if self.plot3d_dock:
+        #     self.plot3d_dock.update_machine(self.machine)
 
-        for dock in self.plot_mmt_docks:
+        # for dock in self.plot_mmt_docks:
+        #     dock.update_machine(self.machine)
+
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
             dock.update_machine(self.machine)
 
         # this will call replot twice - optimize if needed
@@ -324,10 +329,15 @@ class MainWindow(qtw.QMainWindow):
             )
             self.machine.measurements[mmt_name] = mmt
 
-        for dock in self.plot_mmt_docks:
+        # for dock in self.plot_mmt_docks:
+        #     dock.update_measurement_list()
+        # if self.plot3d_dock:
+        #     self.plot3d_dock.update_measurement_list()
+
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
             dock.update_measurement_list()
-        if self.plot3d_dock:
-            self.plot3d_dock.update_measurement_list()
+
         self.replot()
 
     def change_prb_title(self, param):
@@ -370,13 +380,15 @@ class MainWindow(qtw.QMainWindow):
         can have lots of these
         each dock can display multiple measurements
         """
+        _containers, self.plot_docks = self.dock_area.findAll()
         if name is None:
-            name = f"plate{len(self.plot_mmt_docks)}"
+            name = f"plate{len(self.plot_docks)-1}"
         print(f"{name=}")
         new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot_mmt_docks.append(new_plot_dock)
+        _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
 
     def add_new_plot_bar_dock(self, _parameter, name=None):
@@ -385,12 +397,14 @@ class MainWindow(qtw.QMainWindow):
         can have lots of these
         each dock can display multiple measurements
         """
+        _containers, self.plot_docks = self.dock_area.findAll()
         if name is None:
-            name = f"bar{len(self.plot_mmt_docks)}"
+            name = f"bar{len(self.plot_docks)}"
         new_plot_dock = gc.PlotBarDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
         self.plot_mmt_docks.append(new_plot_dock)
+        _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
 
     def recalculate(self):
@@ -398,10 +412,14 @@ class MainWindow(qtw.QMainWindow):
 
     def replot(self):
         self.recalculate()
-        if self.plot3d_dock:
-            self.plot3d_dock.replot()
-        for dock in self.plot_mmt_docks:
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
             dock.replot()
+
+        # if self.plot3d_dock:
+        #     self.plot3d_dock.replot()
+        # for dock in self.plot_mmt_docks:
+        #     dock.replot()
 
     def save_state(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(
@@ -416,7 +434,8 @@ class MainWindow(qtw.QMainWindow):
         state_dict["dock_area"] = self.dock_area.saveState()
         state_dict["docks"] = {}
 
-        for dock in self.plot_mmt_docks:
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
             state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
                 filter="user"
             )
@@ -435,7 +454,7 @@ class MainWindow(qtw.QMainWindow):
             state_dict = json.load(fp)
 
         # remove any existing docks
-        for dock in self.plot_mmt_docks:
+        for dock in self.plot_docks.values():
             dock.close()
             del dock
 
@@ -445,11 +464,11 @@ class MainWindow(qtw.QMainWindow):
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
                 self.add_new_plot_plate_dock(None, name=dock_name)
-                self.plot_mmt_docks[-1].plot_controls.restoreState(dock_state)
+                self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
 
             elif dock_name[0] == "b":
                 self.add_new_plot_bar_dock(name=dock_name)
-                self.plot_mmt_docks[-1].plot_controls.restoreState(dock_state)
+                self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             else:
                 raise ValueError("Unknown dock type")
 
@@ -473,6 +492,7 @@ class MainWindow(qtw.QMainWindow):
 
         for key, value in d.items():
             print(key)
+            print(type(value))
             print(value)
             print()
 
