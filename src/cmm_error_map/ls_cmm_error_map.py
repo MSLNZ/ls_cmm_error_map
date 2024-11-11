@@ -28,9 +28,9 @@ class MainWindow(qtw.QMainWindow):
         super(MainWindow, self).__init__()
         self.machine = dc.pmm_866
         self.cmm_models = cf.cmm_models
+        self.nprbs = 0
+        self.nmmts = 0
 
-        # list of added 2d plots
-        self.plot_mmt_docks = []
         self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
@@ -213,6 +213,7 @@ class MainWindow(qtw.QMainWindow):
         )
         self.add_new_probe_group(self.prb_group)
         self.add_new_probe_group(self.prb_group)
+
         self.update_probes()
         self.prb_group.sigAddNew.connect(self.add_new_probe_group)
         self.prb_group.sigTreeStateChanged.connect(self.update_probes)
@@ -221,11 +222,19 @@ class MainWindow(qtw.QMainWindow):
         """
         add the controls for a new probe to the side bar
         """
-        new_title = f"Probe {len(parent.childs)}"
+        new_title = f"Probe {self.nprbs}"
         grp_params = gc.probe_control_grp.copy()
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("prb_title").sigValueChanged.connect(self.change_prb_title)
         new_grp.child("prb_title").setValue(new_title)
+        new_grp.sigContextMenu.connect(self.delete_group)
+        self.nprbs += 1
+
+    def delete_group(self, grp, change):
+        if change == "Delete":
+            grp.remove()
+            self.update_prb_lists()
+            self.update_measurements()
 
     def update_probes(self):
         """
@@ -280,7 +289,7 @@ class MainWindow(qtw.QMainWindow):
         """
         add the controls for a new artefact measurement to the side bar
         """
-        new_title = f"Measurement{len(parent.childs)}"
+        new_title = f"Measurement {self.nmmts}"
         grp_params = gc.mmt_control_grp.copy()
 
         with self.mmt_group.treeChangeBlocker():
@@ -295,8 +304,10 @@ class MainWindow(qtw.QMainWindow):
             new_grp.child("probe").setLimits(prb_limits)
             new_grp.child("probe").setValue(list(prb_limits.values())[0])
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
+            new_grp.sigContextMenu.connect(self.delete_group)
 
         self.update_measurements()
+        self.nmmts += 1
 
     def update_measurements(self):
         """
@@ -345,6 +356,9 @@ class MainWindow(qtw.QMainWindow):
         event handler for a change in probe name
         """
         param.parent().setOpts(title=param.value())
+        self.update_prb_lists()
+
+    def update_prb_lists(self):
         try:
             self.update_measurements()
             # update probe titles in measurement lists
@@ -387,7 +401,6 @@ class MainWindow(qtw.QMainWindow):
         new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
-        self.plot_mmt_docks.append(new_plot_dock)
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
 
@@ -403,7 +416,6 @@ class MainWindow(qtw.QMainWindow):
         new_plot_dock = gc.PlotBarDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
-        self.plot_mmt_docks.append(new_plot_dock)
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
 
@@ -458,8 +470,6 @@ class MainWindow(qtw.QMainWindow):
             dock.close()
             del dock
 
-        self.plot_mmt_docks = []
-
         self.control_group.restoreState(state_dict["main_state"])
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
@@ -485,16 +495,10 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        c, d = self.dock_area.findAll()
-        for item in c:
-            print(item)
-            print()
-
-        for key, value in d.items():
-            print(key)
-            print(type(value))
-            print(value)
-            print()
+        for probe_child in self.prb_group.children():
+            print(f"{probe_child.name()=}")
+        print(self.machine.probes)
+        print()
 
 
 def main():

@@ -220,6 +220,7 @@ probe_control_grp = {
     "name": "prb_control_grp0",
     "type": "group",
     "expanded": False,
+    "context": ["Delete"],
     "children": [
         {
             "name": "prb_title",
@@ -258,6 +259,7 @@ mmt_control_grp = {
     "name": "mmt_control_grp0",
     "title": "New Measurement",
     "type": "group",
+    "context": ["Delete"],
     "children": [
         {
             "type": "str",
