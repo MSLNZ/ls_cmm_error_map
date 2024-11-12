@@ -304,6 +304,7 @@ class Plot3dDock(Dock):
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
+        self.dock_name = name
 
     def add_control_tree(self):
         """

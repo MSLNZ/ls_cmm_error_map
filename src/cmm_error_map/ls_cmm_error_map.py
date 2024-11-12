@@ -453,7 +453,7 @@ class MainWindow(qtw.QMainWindow):
             )
 
         with open(filename, "w") as fp:
-            json.dump(state_dict, fp)
+            json.dump(state_dict, fp, indent=4)
 
     def restore_state(self):
         filename, _ = qtw.QFileDialog.getOpenFileName(
@@ -467,9 +467,11 @@ class MainWindow(qtw.QMainWindow):
 
         # remove any existing docks
         for dock in self.plot_docks.values():
-            dock.close()
-            del dock
+            if dock.dock_name != "3D Deformation":
+                dock.close()
+                del dock
 
+        _containers, self.plot_docks = self.dock_area.findAll()
         self.control_group.restoreState(state_dict["main_state"])
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
@@ -478,6 +480,8 @@ class MainWindow(qtw.QMainWindow):
 
             elif dock_name[0] == "b":
                 self.add_new_plot_bar_dock(name=dock_name)
+                self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+            elif dock_name[0] == "3":
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             else:
                 raise ValueError("Unknown dock type")
