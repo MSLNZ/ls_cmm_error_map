@@ -140,15 +140,19 @@ class Measurement:
     artefact: ArtefactType
     transform_mat: np.ndarray  # (4, 4)
     probe: Probe
+
     cmm_nominal: np.ndarray  # (3, n) the nominal position of the balls in CMM CSY
     cmm_dev: np.ndarray  # (3, n) the deformed - nominal position in CMM CSY
     mmt_nominal: np.ndarray  # (3, n) the nominal position of the balls in artefact CSY
     mmt_dev: np.ndarray  # (3, n) the deformed - nominal position in artefact CSY
+    fixed: bool = False  # True, data does not change with model parameters
 
     def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
         """
         update data with new model_parameters
         """
+        if self.fixed:
+            return
         # nominal position of plate/bar in artefact CSY
         nx, ny = self.artefact.nballs
         ball_range = np.arange(nx * ny)

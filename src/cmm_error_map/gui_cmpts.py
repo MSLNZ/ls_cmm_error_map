@@ -1,6 +1,7 @@
 # from dataclasses import dataclass, field
 
 import numpy as np
+import scipy.spatial.transform as st
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
@@ -11,6 +12,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.data_cmpts as dc
+
 
 slider_factors = {
     "Txx": 1e-6,
@@ -717,15 +719,14 @@ class PlotBarDock(Dock):
 def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
     """
     takes the vectors from the gui elements (rot in degrees) and
-    returns the corresponding Transform3D object
-    sets the (euler) angles in order xyz to match the
-    Blender mathutils Euler.to_matrix method
+    returns a 4x4 transform matrix
+    uses scipy.spatial.transform to convert from gui Euler angles
     """
-    mat = pg.Transform3D()
-    mat.translate(*vloc)
-    mat.rotate(vrot[2], 0.0, 0.0, 1.0)
-    mat.rotate(vrot[1], 0.0, 1.0, 0.0)
-    mat.rotate(vrot[0], 1.0, 0.0, 0.0)
+    rot_st = st.Rotation.from_euler("ZYX", np.flip(vrot), degrees=True)
+    mat_st = rot_st.as_matrix()
+    loc = np.array(vloc).reshape((-1, 1))
+    mat = np.hstack((mat_st, loc))
+    mat = np.vstack((mat, np.array([[0, 0, 0, 1]])))
     return mat
 
 

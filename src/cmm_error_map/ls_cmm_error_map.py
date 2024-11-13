@@ -324,7 +324,7 @@ class MainWindow(qtw.QMainWindow):
             vloc = [grand_kid.value() for grand_kid in grp_loc]
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
-            transform3d = gc.vec_to_transform3d(vloc, vrot).matrix()
+            transform3d = gc.vec_to_transform3d(vloc, vrot)
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mmt = dc.Measurement(
