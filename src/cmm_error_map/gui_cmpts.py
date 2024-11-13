@@ -1,7 +1,7 @@
 # from dataclasses import dataclass, field
 
 import numpy as np
-import scipy.spatial.transform as st
+
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
@@ -714,20 +714,6 @@ class PlotBarDock(Dock):
                     lines,
                     mmt,
                 )
-
-
-def vec_to_transform3d(vloc, vrot) -> pg.Transform3D:
-    """
-    takes the vectors from the gui elements (rot in degrees) and
-    returns a 4x4 transform matrix
-    uses scipy.spatial.transform to convert from gui Euler angles
-    """
-    rot_st = st.Rotation.from_euler("ZYX", np.flip(vrot), degrees=True)
-    mat_st = rot_st.as_matrix()
-    loc = np.array(vloc).reshape((-1, 1))
-    mat = np.hstack((mat_st, loc))
-    mat = np.vstack((mat, np.array([[0, 0, 0, 1]])))
-    return mat
 
 
 def grid_line_index(size=(5, 4, 4)):

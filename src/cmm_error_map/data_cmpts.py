@@ -20,9 +20,15 @@ A **Probe** has
 - x,y,z vector
 """
 
+import csv
+
+from pathlib import Path
+import datetime as dt
+
 from dataclasses import dataclass
 
 import numpy as np
+import scipy.spatial.transform as st
 
 import cmm_error_map.design_linear as design
 
@@ -145,7 +151,7 @@ class Measurement:
     cmm_dev: np.ndarray  # (3, n) the deformed - nominal position in CMM CSY
     mmt_nominal: np.ndarray  # (3, n) the nominal position of the balls in artefact CSY
     mmt_dev: np.ndarray  # (3, n) the deformed - nominal position in artefact CSY
-    fixed: bool = False  # True, data does not change with model parameters
+    fixed: bool = False  # if True, data does not change with model parameters
 
     def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
         """
@@ -183,6 +189,29 @@ class Measurement:
             mmt_deform = cmm_to_plate_csy(cmm_deform, self.artefact)
 
         self.mmt_dev = mmt_deform - self.mmt_nominal
+
+
+def matrix_from_vectors(vloc, vrot):
+    """
+    takes the vectors from the gui elements (rot in degrees) and
+    returns a 4x4 transform matrix
+    uses scipy.spatial.transform to convert from gui Euler angles
+    """
+    rot_st = st.Rotation.from_euler("ZYX", np.flip(vrot), degrees=True)
+    mat_st = rot_st.as_matrix()
+    loc = np.array(vloc).reshape((-1, 1))
+    mat = np.hstack((mat_st, loc))
+    transform_mat = np.vstack((mat, np.array([[0, 0, 0, 1]])))
+    return transform_mat
+
+
+def matrix_to_vectors(transform_mat):
+    vloc = transform_mat[:3, 3]
+
+    rot_st = st.Rotation.from_matrix(transform_mat[:3, :3])
+    eul_st = rot_st.as_euler("ZYX", degrees=True)
+    vrot = np.flip(eul_st)
+    return vloc, vrot
 
 
 def cmm_to_plate_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
@@ -308,3 +337,132 @@ pmm_866 = Machine(
     probes={},
     model_params=model_parameters_dict.copy(),
 )
+
+
+# these could be methods of Measurement class
+
+
+def short_header(mmt: Measurement):
+    header = ""
+    now = dt.datetime.now().isoformat(sep=" ")
+    header += f"save time,{now}\n"
+    header += f"title,{mmt.title}\n"
+    header += f"artefact.title,{mmt.artefact.title}\n"
+    header += f"artefact.nballs,{mmt.artefact.nballs[0]},{mmt.artefact.nballs[0]} \n"
+    header += f"artefact.ball_spacing,{mmt.artefact.ball_spacing}\n"
+    vloc, vrot = matrix_to_vectors(mmt.transform_mat)
+    header += f"location,{vloc[0]}, {vloc[1]}, {vloc[2]}\n"
+    header += f"rotation/deg,{vrot[0]}, {vrot[1]}, {vrot[2]}\n"
+    return header
+
+
+def mmt_snapshot_to_csv(fp: Path, mmt: Measurement):
+    """
+    the minimum data to save for reimporting
+    """
+    header = short_header(mmt)
+    header += "id,mmt_x,mmt_y,mmt_z\n"
+    np_out = mmt.mmt_nominal + mmt.mmt_dev
+    np_out = np.vstack((np.arange(np_out.shape[1]), np_out))
+    with open(fp, "w") as fp:
+        fp.write(header)
+        np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 3)
+
+
+def mmt_full_data_to_csv(fp: Path, mmt: Measurement):
+    """
+    simulation in cmm and artefact csy
+    """
+    header = short_header(mmt)
+    header += "id,"
+    header += "cmm_nom_x,cmm_nom_y,cmm_nom_z,"
+    header += "cmm_dev_x,cmm_dev_y,cmm_dev_z,"
+    header += "mmt_nom_x,mmt_nom_y,mmt_nom_z,"
+    header += "mmt_dev_x,mmt_dev_y,mmt_dev_z,"
+    header += "\n"
+
+    np_out = np.vstack((mmt.cmm_nominal, mmt.cmm_dev, mmt.mmt_nominal, mmt.mmt_dev))
+    np_out = np.vstack((np.arange(np_out.shape[1]), np_out))
+    with open(fp, "w") as fp:
+        fp.write(header)
+        np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 12)
+
+
+def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine):
+    """
+    file with model parameters etc
+    """
+    header = short_header(mmt)
+    cmm = machine.cmm_model
+    header += f"cmm_model.title,{cmm.title}\n"
+    header += f"cmm_model.size,{cmm.size[0]},{cmm.size[1]},{cmm.size[2]}\n"
+    header += f"cmm_model.fixed_table,{cmm.fixed_table}\n"
+    header += f"cmm_model.bridge_axis,{cmm.bridge_axis}\n"
+    prb = mmt.probe
+    header += f"probe.title,{prb.title}\n"
+    header += f"probe.name,{prb.name}\n"
+    header += f"probe.length,{prb.length[0]},{prb.length[1]},{prb.length[2]}\n"
+    header += "model parameters\n"
+    for key, value in machine.model_params.items():
+        header += f"{key},{value}\n"
+    with open(fp, "w") as fp:
+        fp.write(header)
+
+
+def mmt_from_snapshot_csv(fn: Path):
+    """
+    reads in file either created from `mmt_snapshot_to_csv`
+    or created from real measurements
+    file should have header and structure as written by `mmt_snapshot_to_csv`
+    """
+    p0 = Probe(title="P0", name="p0", length=np.array([0, 0, 0]))
+    ss_dict = {}
+    mmtxyz = []
+    with open(fn) as fp:
+        snapshot = csv.reader(fp, delimiter=",")
+        for row in snapshot:
+            if row[0] == "id":
+                break
+            ss_dict[row[0]] = row[1:]
+        for row in snapshot:
+            mmtxyz.append([float(row[0]), float(row[1]), float(row[2])])
+    mmtxyz = np.array(mmtxyz).T
+    artefact = ArtefactType(
+        title=ss_dict["artefact.title"][0],
+        nballs=(int(ss_dict["artefact.nballs"][0]), int(ss_dict["artefact.nballs"][1])),
+        ball_spacing=float(ss_dict["artefact.ball_spacing"][0]),
+    )
+
+    vloc = [float(s) for s in ss_dict["location"]]
+    vrot = [float(s) for s in ss_dict["rotation/deg"]]
+
+    # nominal position of plate/bar in artefact CSY
+    nx, ny = artefact.nballs
+    ball_range = np.arange(nx * ny)
+    x = (ball_range) % nx * artefact.ball_spacing
+    y = (ball_range) // nx * artefact.ball_spacing
+    z = (ball_range) * 0.0
+    mmt_nominal = np.vstack((x, y, z))
+    mmt_nominal1 = np.vstack((x, y, z, np.ones((1, x.shape[0]))))
+
+    mmt_dev = mmtxyz - mmt_nominal
+    # nominal position of plate in CMM CSY
+    transform_mat = matrix_from_vectors(vloc, vrot)
+    cmm_nominal1 = transform_mat @ mmt_nominal1
+    cmm_nominal = cmm_nominal1[:3, :]
+    cmm_dev = np.zeros_like(cmm_nominal)
+
+    mmt = Measurement(
+        title=ss_dict["title"][0],
+        name="mmt_00",
+        artefact=artefact,
+        transform_mat=np.identity(4),
+        probe=p0,
+        cmm_nominal=cmm_nominal,
+        cmm_dev=cmm_dev,
+        mmt_nominal=mmt_nominal,
+        mmt_dev=mmt_dev,
+        fixed=True,
+    )
+
+    return mmt
