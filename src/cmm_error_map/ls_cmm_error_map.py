@@ -48,6 +48,7 @@ class MainWindow(qtw.QMainWindow):
         self.make_model_sliders()
         self.make_probe_controls()
         self.make_measurement_controls()
+        self.make_snapshot_controls()
         self.make_machine_controls()
 
         self.control_group = Parameter.create(type="group", name="main_controls")
@@ -55,6 +56,7 @@ class MainWindow(qtw.QMainWindow):
         self.control_group.addChild(self.machine_group)
         self.control_group.addChild(self.prb_group)
         self.control_group.addChild(self.mmt_group)
+        self.control_group.addChild(self.snapshot_group)
         self.control_group.addChild(self.slider_group)
 
         # other controls
@@ -289,9 +291,9 @@ class MainWindow(qtw.QMainWindow):
     def make_measurement_controls(self) -> Parameter:
         self.mmt_group = Parameter.create(
             type="group",
-            title="Measurements",
+            title="Simulations",
             name="mmt_group",
-            addText="Add Measurement",
+            addText="Add Simulation",
         )
         self.add_new_mmt_group(self.mmt_group)
         self.mmt_group.sigAddNew.connect(self.add_new_mmt_group)
@@ -301,7 +303,7 @@ class MainWindow(qtw.QMainWindow):
         """
         add the controls for a new artefact measurement to the side bar
         """
-        new_title = f"Measurement {self.nmmts}"
+        new_title = f"Simulation {self.nmmts}"
         grp_params = gc.mmt_control_grp.copy()
 
         with self.mmt_group.treeChangeBlocker():
@@ -359,7 +361,7 @@ class MainWindow(qtw.QMainWindow):
         self.replot()
 
     def save_mmt(self, mmt: dc.Measurement):
-        print(f"Saving measurement {mmt.name}, artefact {mmt.artefact.title}")
+        print(f"Saving simulation {mmt.name}, artefact {mmt.artefact.title}")
         dialog = gc.SaveSimulationDialog()
         if dialog.exec() == qtw.QDialog.Accepted:
             now = dt.datetime.now().isoformat(sep=" ")
@@ -382,6 +384,57 @@ class MainWindow(qtw.QMainWindow):
                 fp.write(pre_text)
                 fp.write("\n\n")
                 fp.write(dialog.readme_text)
+
+    def make_snapshot_controls(self) -> Parameter:
+        self.snapshot_group = Parameter.create(
+            type="group",
+            title="Snapshots",
+            name="snapshot_group",
+            addText="Load from CSV",
+        )
+        self.snapshot_group.sigAddNew.connect(self.load_snapshot)
+
+    def load_snapshot(self):
+        filename, _ = qtw.QFileDialog.getOpenFileName(self, filter="CSV Files (*.csv)")
+        if not filename:
+            return
+
+        mmt = dc.mmt_from_snapshot_csv(Path(filename))
+        self.add_new_snapshot_group(mmt)
+        mmt_name = f"Snapshot {self.nmmts}"
+        self.machine.measurements[mmt_name] = mmt
+        self.nmmts += 1
+
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
+            dock.update_measurement_list()
+
+        self.replot()
+
+    def add_new_snapshot_group(self, mmt):
+        # a snapshot is just a immutable measurement
+        grp_params = gc.mmt_control_grp.copy()
+        grp_params["name"] = mmt.title
+        grp_params["context"] = []
+        new_grp = self.snapshot_group.addChild(grp_params, autoIncrementName=True)
+        gc.set_children_readonly(new_grp, True)
+
+        new_grp.setOpts(title=mmt.title)
+        new_grp.child("mmt_title").setValue(mmt.title)
+        new_grp.child("mmt_title").setOpts(title="Snapshot Title")
+        new_grp.child("mmt_title").setReadonly(False)
+        new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
+
+        new_grp.child("artefact").setLimits([mmt.artefact.title])
+        new_grp.child("artefact").setValue(mmt.artefact.title)
+
+        new_grp.child("probe").setLimits(["NA"])
+        new_grp.child("probe").setValue("NA")
+
+        location, rotation = dc.matrix_to_vectors(mmt.transform_mat)
+        for i, axis in enumerate(["X", "Y", "Z"]):
+            new_grp.child("grp_location", axis).setValue(location[i])
+            new_grp.child("grp_rotation", axis).setValue(rotation[i])
 
     def change_prb_title(self, param):
         """

@@ -410,7 +410,7 @@ def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine, now: dt.da
         fp.write(header)
 
 
-def mmt_from_snapshot_csv(fn: Path):
+def mmt_from_snapshot_csv(fn: Path) -> Measurement:
     """
     reads in file either created from `mmt_snapshot_to_csv`
     or created from real measurements

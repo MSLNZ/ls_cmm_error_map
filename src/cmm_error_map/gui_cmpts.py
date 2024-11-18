@@ -158,8 +158,8 @@ mmt_control_grp = {
         {
             "type": "str",
             "name": "mmt_title",
-            "title": "Measurement Title",
-            "value": "New Measurement",
+            "title": "Simulation Title",
+            "value": "New Simulation",
         },
         {
             "name": "artefact",
@@ -229,6 +229,34 @@ dock1d_control_grp = {
         },
     ],
 }
+
+
+def all_descendants(root, kids=None):
+    """
+    finds all child parameters recursively
+    """
+    if root is None:
+        return
+    if kids is None:
+        kids = []
+    if root.isType("group"):
+        for child in root.children():
+            all_descendants(child, kids)
+    else:
+        kids.append(root)
+    return kids
+
+
+def set_children_readonly(param, readonly):
+    """
+    sets all the child parameters of param to readonly status
+    """
+    with param.treeChangeBlocker():
+        # only emit one signal for all changes
+        kids = all_descendants(param)
+        for kid in kids:
+            kid.setOpts(readonly=readonly)
+
 
 # MARK: 3D plots
 
