@@ -3,6 +3,10 @@ main gui for cmm error map app
 0oOilL1I| 0123456789
 """
 
+import sys
+from pathlib import Path
+import datetime as dt
+
 import json
 import numpy as np
 import pyqtgraph as pg
@@ -19,6 +23,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import cmm_error_map.gui_cmpts as gc
 import cmm_error_map.data_cmpts as dc
 import cmm_error_map.config.config as cf
+from cmm_error_map import __version__
 
 DEBUG = True
 
@@ -230,6 +235,13 @@ class MainWindow(qtw.QMainWindow):
         new_grp.sigContextMenu.connect(self.delete_group)
         self.nprbs += 1
 
+    def mmt_menu(self, grp, change):
+        if change == "Delete":
+            self.delete_group(grp, change)
+        elif change == "Save to CSV":
+            mmt = self.machine.measurements[grp.name()]
+            self.save_mmt(mmt)
+
     def delete_group(self, grp, change):
         if change == "Delete":
             grp.remove()
@@ -304,7 +316,7 @@ class MainWindow(qtw.QMainWindow):
             new_grp.child("probe").setLimits(prb_limits)
             new_grp.child("probe").setValue(list(prb_limits.values())[0])
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
-            new_grp.sigContextMenu.connect(self.delete_group)
+            new_grp.sigContextMenu.connect(self.mmt_menu)
 
         self.update_measurements()
         self.nmmts += 1
@@ -340,16 +352,36 @@ class MainWindow(qtw.QMainWindow):
             )
             self.machine.measurements[mmt_name] = mmt
 
-        # for dock in self.plot_mmt_docks:
-        #     dock.update_measurement_list()
-        # if self.plot3d_dock:
-        #     self.plot3d_dock.update_measurement_list()
-
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
             dock.update_measurement_list()
 
         self.replot()
+
+    def save_mmt(self, mmt: dc.Measurement):
+        print(f"Saving measurement {mmt.name}, artefact {mmt.artefact.title}")
+        dialog = gc.SaveSimulationDialog()
+        if dialog.exec() == qtw.QDialog.Accepted:
+            now = dt.datetime.now().isoformat(sep=" ")
+            fns = dialog.filenames
+            # create folder
+            fns["snapshot"].parent.mkdir(parents=True, exist_ok=True)
+            dc.mmt_snapshot_to_csv(fns["snapshot"], mmt, now)
+            dc.mmt_full_data_to_csv(fns["fulldata"], mmt, now)
+            dc.mmt_metadata_to_csv(fns["metadata"], mmt, self.machine, now)
+            # readme
+            pre_text = f"Created at: {now}\n"
+            pre_text += f"CMM Error Map Software Version: {__version__}\n"
+            exe_fn = Path(sys.executable)
+            if exe_fn.name != "python.exe":
+                # run from exe created with pyinstaller etc.
+                pre_text += f"exe file: {exe_fn.resolve()} \n"
+                pre_text += f"{dt.datetime.fromtimestamp(exe_fn.stat().st_ctime)}\n"
+
+            with open(fns["readme"], "w") as fp:
+                fp.write(pre_text)
+                fp.write("\n\n")
+                fp.write(dialog.readme_text)
 
     def change_prb_title(self, param):
         """

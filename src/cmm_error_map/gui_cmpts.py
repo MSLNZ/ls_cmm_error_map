@@ -1,5 +1,7 @@
 # from dataclasses import dataclass, field
 
+import datetime as dt
+from pathlib import Path
 import numpy as np
 
 import pyqtgraph as pg
@@ -10,6 +12,7 @@ from pyqtgraph.dockarea.Dock import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyqtgraph.Qt.QtCore import Qt as qtc
+import pyqtgraph.Qt.QtWidgets as qtw
 
 import cmm_error_map.data_cmpts as dc
 
@@ -40,117 +43,6 @@ slider_factors = {
 
 x = np.array([1, 2, 5, 7.5])
 magnification_span = np.hstack((x * 100, x * 1000, x * 10000))
-
-# MARK: 3D plots
-
-
-def plot3d_axis(w):
-    # axis items
-    org = gl.GLScatterPlotItem(
-        pos=(0, 0, 0), size=20, color=pg.mkColor("white"), pxMode=False
-    )
-
-    w.addItem(org)
-    axis = gl.GLAxisItem()
-    axis.setSize(x=1000, y=700, z=700)
-    w.addItem(axis)
-
-    xlabel = gl.GLTextItem(pos=(1000.0, 0.0, 0.0), text="X")
-    w.addItem(xlabel)
-    ylabel = gl.GLTextItem(pos=(0.0, 700.0, 0.0), text="Y")
-    w.addItem(ylabel)
-    zlabel = gl.GLTextItem(pos=(0.0, 0.0, 700.0), text="Z")
-    w.addItem(zlabel)
-
-
-def plot3d_box(w: gl.GLViewWidget, box: dc.BoxGrid, col="white") -> gl.GLLinePlotItem:
-    """
-    produces a 3D plot of the undeformed machine ready for updating with
-    deformation and magnification via update_plot_model3d
-    """
-    plot3d_axis(w)
-    # undeformed box
-    fixed_box = gl.GLLinePlotItem(color=pg.mkColor("green"), mode="lines")
-    update_plot3d_box(fixed_box, box, 1.0)
-    w.addItem(fixed_box)
-
-    # model deformed box
-    gridlines = gl.GLLinePlotItem(color=pg.mkColor(col), mode="lines")
-    update_plot3d_box(gridlines, box, 1.0)
-
-    w.addItem(gridlines)
-    w.setCameraPosition(distance=2000)
-
-    return gridlines
-
-
-def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
-    """
-    update a plot produced by plot3d_box with a new set of params
-    """
-
-    ind = grid_line_index(box.npts)
-    pts = box.grid_nominal[:, ind] + mag * box.grid_dev[:, ind]
-    gridlines.setData(pos=pts.T)
-    # print(f"{box=}")
-
-
-def plot3d_plate(
-    w: gl.GLViewWidget, mmt: dc.Measurement, col="white"
-) -> list[type[gl.GLGraphicsItem]]:
-    """
-    produces a 3d plot of a ballplate ready for updating with location, rotataion, deformation
-    and magnification by update_plot_plate3d
-    """
-    # undeformed plate with no transform, zero length probe
-    balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
-    lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
-
-    update_plot3d_plate(
-        balls,
-        lines,
-        mmt,
-        magnification=1.0,
-    )
-
-    nx, ny = mmt.artefact.nballs
-    xindex = nx - 1
-    yindex = nx * (ny - 1)
-
-    cols = [1, 1, 1, 0.75] * (nx * ny)  # white
-    cols = np.array(cols).reshape(-1, 4)
-    cols[0, :] = [1.0, 0.627, 0.157, 0.75]  # orange
-    cols[xindex, :] = [1.0, 0.2, 0.322, 0.75]  # red
-    cols[yindex, :] = [0.545, 0.863, 0, 0.75]  # green
-    balls.setData(color=cols)
-
-    w.addItem(balls)
-    w.addItem(lines)
-
-    return [balls, lines]
-
-
-def update_plot3d_plate(
-    balls: gl.GLScatterPlotItem,
-    lines: gl.GLLinePlotItem,
-    mmt: dc.Measurement,
-    magnification: float,
-):
-    """
-    takes the 3d plate position data mmt from mmt applies the magnifiacation
-    and sets the data in balls and lines
-    """
-    xyz = mmt.cmm_nominal + magnification * mmt.cmm_dev
-    balls.setData(pos=xyz.T)
-
-    nx, ny = mmt.artefact.nballs
-    ind = np.arange(nx * ny).reshape((ny, nx))
-    indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
-    indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
-    ind_lines = np.hstack((indx, indy))
-    pos = xyz[:, ind_lines]
-    lines.setData(pos=pos.T)
-
 
 # used to assign controls to axis groups
 axis_group = {
@@ -261,7 +153,7 @@ mmt_control_grp = {
     "name": "mmt_control_grp0",
     "title": "New Measurement",
     "type": "group",
-    "context": ["Delete"],
+    "context": ["Save to CSV", "Delete"],
     "children": [
         {
             "type": "str",
@@ -285,6 +177,168 @@ mmt_control_grp = {
         grp_rotation,
     ],
 }
+
+# parameter structures for 2d plot controls
+
+
+dock2d_control_grp = {
+    "title": "▼",
+    "name": "plot_controls",
+    "type": "group",
+    "expanded": True,
+    "children": [
+        {
+            "name": "plot_title",
+            "title": "Plot Title",
+            "type": "str",
+            "value": "Plot 0",
+        },
+        {
+            "name": "mmts_to_plot",
+            "title": "To Plot",
+            "type": "checklist",
+            "limits": [],
+        },
+        {
+            "type": "slider",
+            "name": "slider_mag",
+            "title": "Magnification",
+            "span": magnification_span,
+            "value": 5000,
+        },
+    ],
+}
+
+dock1d_control_grp = {
+    "title": "▼",
+    "name": "plot_controls",
+    "type": "group",
+    "expanded": True,
+    "children": [
+        {
+            "name": "plot_title",
+            "title": "Plot Title",
+            "type": "str",
+            "value": "Plot 0",
+        },
+        {
+            "name": "mmts_to_plot",
+            "title": "To Plot",
+            "type": "checklist",
+            "limits": [],
+        },
+    ],
+}
+
+# MARK: 3D plots
+
+
+def plot3d_axis(w):
+    # axis items
+    org = gl.GLScatterPlotItem(
+        pos=(0, 0, 0), size=20, color=pg.mkColor("white"), pxMode=False
+    )
+
+    w.addItem(org)
+    axis = gl.GLAxisItem()
+    axis.setSize(x=1000, y=700, z=700)
+    w.addItem(axis)
+
+    xlabel = gl.GLTextItem(pos=(1000.0, 0.0, 0.0), text="X")
+    w.addItem(xlabel)
+    ylabel = gl.GLTextItem(pos=(0.0, 700.0, 0.0), text="Y")
+    w.addItem(ylabel)
+    zlabel = gl.GLTextItem(pos=(0.0, 0.0, 700.0), text="Z")
+    w.addItem(zlabel)
+
+
+def plot3d_box(w: gl.GLViewWidget, box: dc.BoxGrid, col="white") -> gl.GLLinePlotItem:
+    """
+    produces a 3D plot of the undeformed machine ready for updating with
+    deformation and magnification via update_plot_model3d
+    """
+    plot3d_axis(w)
+    # undeformed box
+    fixed_box = gl.GLLinePlotItem(color=pg.mkColor("green"), mode="lines")
+    update_plot3d_box(fixed_box, box, 1.0)
+    w.addItem(fixed_box)
+
+    # model deformed box
+    gridlines = gl.GLLinePlotItem(color=pg.mkColor(col), mode="lines")
+    update_plot3d_box(gridlines, box, 1.0)
+
+    w.addItem(gridlines)
+    w.setCameraPosition(distance=2000)
+
+    return gridlines
+
+
+def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
+    """
+    update a plot produced by plot3d_box with a new set of params
+    """
+
+    ind = grid_line_index(box.npts)
+    pts = box.grid_nominal[:, ind] + mag * box.grid_dev[:, ind]
+    gridlines.setData(pos=pts.T)
+    # print(f"{box=}")
+
+
+def plot3d_plate(
+    w: gl.GLViewWidget, mmt: dc.Measurement, col="white"
+) -> list[type[gl.GLGraphicsItem]]:
+    """
+    produces a 3d plot of a ballplate ready for updating with location, rotataion, deformation
+    and magnification by update_plot_plate3d
+    """
+    # undeformed plate with no transform, zero length probe
+    balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
+    lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
+
+    update_plot3d_plate(
+        balls,
+        lines,
+        mmt,
+        magnification=1.0,
+    )
+
+    nx, ny = mmt.artefact.nballs
+    xindex = nx - 1
+    yindex = nx * (ny - 1)
+
+    cols = [1, 1, 1, 0.75] * (nx * ny)  # white
+    cols = np.array(cols).reshape(-1, 4)
+    cols[0, :] = [1.0, 0.627, 0.157, 0.75]  # orange
+    cols[xindex, :] = [1.0, 0.2, 0.322, 0.75]  # red
+    cols[yindex, :] = [0.545, 0.863, 0, 0.75]  # green
+    balls.setData(color=cols)
+
+    w.addItem(balls)
+    w.addItem(lines)
+
+    return [balls, lines]
+
+
+def update_plot3d_plate(
+    balls: gl.GLScatterPlotItem,
+    lines: gl.GLLinePlotItem,
+    mmt: dc.Measurement,
+    magnification: float,
+):
+    """
+    takes the 3d plate position data mmt from mmt applies the magnifiacation
+    and sets the data in balls and lines
+    """
+    xyz = mmt.cmm_nominal + magnification * mmt.cmm_dev
+    balls.setData(pos=xyz.T)
+
+    nx, ny = mmt.artefact.nballs
+    ind = np.arange(nx * ny).reshape((ny, nx))
+    indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
+    indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
+    ind_lines = np.hstack((indx, indy))
+    pos = xyz[:, ind_lines]
+    lines.setData(pos=pos.T)
 
 
 class Plot3dDock(Dock):
@@ -403,58 +457,6 @@ class Plot3dDock(Dock):
 
 
 # MARK: 2D Plots
-
-# parameter structures for 2d plot controls
-
-
-dock2d_control_grp = {
-    "title": "▼",
-    "name": "plot_controls",
-    "type": "group",
-    "expanded": True,
-    "children": [
-        {
-            "name": "plot_title",
-            "title": "Plot Title",
-            "type": "str",
-            "value": "Plot 0",
-        },
-        {
-            "name": "mmts_to_plot",
-            "title": "To Plot",
-            "type": "checklist",
-            "limits": [],
-        },
-        {
-            "type": "slider",
-            "name": "slider_mag",
-            "title": "Magnification",
-            "span": magnification_span,
-            "value": 5000,
-        },
-    ],
-}
-
-dock1d_control_grp = {
-    "title": "▼",
-    "name": "plot_controls",
-    "type": "group",
-    "expanded": True,
-    "children": [
-        {
-            "name": "plot_title",
-            "title": "Plot Title",
-            "type": "str",
-            "value": "Plot 0",
-        },
-        {
-            "name": "mmts_to_plot",
-            "title": "To Plot",
-            "type": "checklist",
-            "limits": [],
-        },
-    ],
-}
 
 
 def plot2d_plate(
@@ -742,3 +744,96 @@ def grid_line_index(size=(5, 4, 4)):
             indicies.extend(ind)
 
     return indicies
+
+
+class FileSaveTree(qtw.QTreeWidget):
+    """
+    display multiple file names for saving a  set of files
+    file names are displayed as a tree
+    the root folder can be edited (double click brings up file dialog) as can
+    the proposed folder and file names.
+    Only allows one folder deep for now
+    """
+
+    def __init__(
+        self, root_folder: Path, folder_prefix: str, filenames: dict, parent=None
+    ):
+        super(FileSaveTree, self).__init__(parent)
+
+        self.root_folder = root_folder
+        self.filenames = filenames
+        root_item = qtw.QTreeWidgetItem(self, [self.root_folder.as_posix()])
+        folder = f"{folder_prefix}{dt.datetime.now().isoformat(sep='T')[:16]}"
+        self.folder_item = qtw.QTreeWidgetItem(root_item, [folder])
+        self.folder_item.setFlags(self.folder_item.flags() | qtc.ItemIsEditable)
+        self.file_items = {}
+        for key, fn in self.filenames.items():
+            file_item = qtw.QTreeWidgetItem(self.folder_item, [fn])
+            file_item.setFlags(file_item.flags() | qtc.ItemIsEditable)
+            self.file_items[key] = file_item
+
+        self.itemDoubleClicked.connect(self.edit_root_folder)
+        self.expandAll()
+        self.setItemsExpandable(False)
+        self.setHeaderHidden(True)
+
+    def edit_root_folder(self):
+        parent_index = self.indexFromItem(self.currentItem()).parent().row()
+        if parent_index == -1:
+            folder = qtw.QFileDialog.getExistingDirectory()
+            if not folder:
+                return
+            self.currentItem().setText(0, folder)
+
+    def get_filenames(self):
+        folder = self.root_folder / self.folder_item.text(0)
+        for key, item in self.file_items.items():
+            self.filenames[key] = folder / item.text(0)
+        return self.filenames
+
+
+class SaveSimulationDialog(qtw.QDialog):
+    def __init__(self, parent=None):
+        super().__init__()
+        layout = qtw.QVBoxLayout()
+        self.setWindowTitle("Save Simulation to CSV files")
+        text = (
+            "The following files will be saved\n"
+            "'snapshot.csv' \t- the minimum data to save for reimporting\n"
+            "'fulldata.csv' \t- the simulation data in CMM and artefact coordinate systems\n"
+            "'metadata.csv' \t- machine, probe, aretfact and model parmeters\n"
+            "'readme.txt'   \t- the contents of the below text field\n"
+            "\n"
+            "The file and folder names can be edited by double clicking on them\n"
+        )
+        layout.addWidget(qtw.QLabel(text))
+
+        home = Path.home() / "Desktop"
+        self.files = FileSaveTree(
+            root_folder=home,
+            folder_prefix="simulation_",
+            filenames={
+                "snapshot": "snapshot.csv",
+                "fulldata": "fulldata.csv",
+                "metadata": "metadata.csv",
+                "readme": "readme.txt",
+            },
+        )
+        self.readme = qtw.QPlainTextEdit()
+        self.readme.setPlaceholderText("...additional description of simulation...")
+
+        btns = qtw.QDialogButtonBox.Save | qtw.QDialogButtonBox.Cancel
+        buttonBox = qtw.QDialogButtonBox(btns)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        layout.addWidget(self.files)
+        layout.addWidget(self.readme)
+        layout.addWidget(buttonBox)
+
+        self.setLayout(layout)
+
+    def accept(self):
+        self.readme_text = self.readme.toPlainText()
+        self.filenames = self.files.get_filenames()
+        super().accept()

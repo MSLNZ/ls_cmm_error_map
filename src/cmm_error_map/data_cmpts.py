@@ -206,8 +206,10 @@ def matrix_from_vectors(vloc, vrot):
 
 
 def matrix_to_vectors(transform_mat):
+    """
+    takes a 4 x 4 transformation matrix and returns the Euler angles (rot in degrees).
+    """
     vloc = transform_mat[:3, 3]
-
     rot_st = st.Rotation.from_matrix(transform_mat[:3, :3])
     eul_st = rot_st.as_euler("ZYX", degrees=True)
     vrot = np.flip(eul_st)
@@ -342,9 +344,8 @@ pmm_866 = Machine(
 # these could be methods of Measurement class
 
 
-def short_header(mmt: Measurement):
+def short_header(mmt: Measurement, now: dt.datetime):
     header = ""
-    now = dt.datetime.now().isoformat(sep=" ")
     header += f"save time,{now}\n"
     header += f"title,{mmt.title}\n"
     header += f"artefact.title,{mmt.artefact.title}\n"
@@ -356,11 +357,11 @@ def short_header(mmt: Measurement):
     return header
 
 
-def mmt_snapshot_to_csv(fp: Path, mmt: Measurement):
+def mmt_snapshot_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
     """
     the minimum data to save for reimporting
     """
-    header = short_header(mmt)
+    header = short_header(mmt, now)
     header += "id,mmt_x,mmt_y,mmt_z\n"
     np_out = mmt.mmt_nominal + mmt.mmt_dev
     np_out = np.vstack((np.arange(np_out.shape[1]), np_out))
@@ -369,11 +370,11 @@ def mmt_snapshot_to_csv(fp: Path, mmt: Measurement):
         np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 3)
 
 
-def mmt_full_data_to_csv(fp: Path, mmt: Measurement):
+def mmt_full_data_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
     """
     simulation in cmm and artefact csy
     """
-    header = short_header(mmt)
+    header = short_header(mmt, now)
     header += "id,"
     header += "cmm_nom_x,cmm_nom_y,cmm_nom_z,"
     header += "cmm_dev_x,cmm_dev_y,cmm_dev_z,"
@@ -388,11 +389,11 @@ def mmt_full_data_to_csv(fp: Path, mmt: Measurement):
         np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 12)
 
 
-def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine):
+def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine, now: dt.datetime):
     """
     file with model parameters etc
     """
-    header = short_header(mmt)
+    header = short_header(mmt, now)
     cmm = machine.cmm_model
     header += f"cmm_model.title,{cmm.title}\n"
     header += f"cmm_model.size,{cmm.size[0]},{cmm.size[1]},{cmm.size[2]}\n"
