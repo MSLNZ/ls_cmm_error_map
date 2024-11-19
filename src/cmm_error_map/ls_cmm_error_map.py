@@ -239,6 +239,7 @@ class MainWindow(qtw.QMainWindow):
 
     def mmt_menu(self, grp, change):
         if change == "Delete":
+            self.machine.measurements.pop(grp.name())
             self.delete_group(grp, change)
         elif change == "Save to CSV":
             mmt = self.machine.measurements[grp.name()]
@@ -328,8 +329,11 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
-        self.machine.measurements = {}
-
+        # keep the snapshots
+        self.machine.measurements = {
+            k: v for k, v in self.machine.measurements.items() if v.fixed
+        }
+        # recreate the simulations from gui
         for mmt_child in self.mmt_group.children():
             mmt_name = mmt_child.name()
             artefact = cf.artefact_models[mmt_child.child("artefact").value()]
@@ -400,8 +404,8 @@ class MainWindow(qtw.QMainWindow):
             return
 
         mmt = dc.mmt_from_snapshot_csv(Path(filename))
+        mmt_name = f"snapshot_grp{len(self.snapshot_group.children())}"
         self.add_new_snapshot_group(mmt)
-        mmt_name = f"Snapshot {self.nmmts}"
         self.machine.measurements[mmt_name] = mmt
         self.nmmts += 1
 
@@ -414,8 +418,8 @@ class MainWindow(qtw.QMainWindow):
     def add_new_snapshot_group(self, mmt):
         # a snapshot is just a immutable measurement
         grp_params = gc.mmt_control_grp.copy()
-        grp_params["name"] = mmt.title
-        grp_params["context"] = []
+        grp_params["name"] = "snapshot_grp0"
+        grp_params["context"] = ["Delete"]
         new_grp = self.snapshot_group.addChild(grp_params, autoIncrementName=True)
         gc.set_children_readonly(new_grp, True)
 
@@ -423,7 +427,8 @@ class MainWindow(qtw.QMainWindow):
         new_grp.child("mmt_title").setValue(mmt.title)
         new_grp.child("mmt_title").setOpts(title="Snapshot Title")
         new_grp.child("mmt_title").setReadonly(False)
-        new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
+        new_grp.child("mmt_title").sigValueChanged.connect(self.change_snapshot_title)
+        new_grp.sigContextMenu.connect(self.mmt_menu)
 
         new_grp.child("artefact").setLimits([mmt.artefact.title])
         new_grp.child("artefact").setValue(mmt.artefact.title)
@@ -435,6 +440,13 @@ class MainWindow(qtw.QMainWindow):
         for i, axis in enumerate(["X", "Y", "Z"]):
             new_grp.child("grp_location", axis).setValue(location[i])
             new_grp.child("grp_rotation", axis).setValue(rotation[i])
+
+    def change_snapshot_title(self, param):
+        param.parent().setOpts(title=param.value())
+        self.machine.measurements[param.parent().name()].title = param.value()
+        _containers, self.plot_docks = self.dock_area.findAll()
+        for dock in self.plot_docks.values():
+            dock.update_measurement_list()
 
     def change_prb_title(self, param):
         """
@@ -584,10 +596,7 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        for probe_child in self.prb_group.children():
-            print(f"{probe_child.name()=}")
-        print(self.machine.probes)
-        print()
+        print(f"{list(self.machine.measurements.keys())=}")
 
 
 def main():

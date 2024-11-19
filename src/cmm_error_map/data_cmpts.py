@@ -426,7 +426,7 @@ def mmt_from_snapshot_csv(fn: Path) -> Measurement:
                 break
             ss_dict[row[0]] = row[1:]
         for row in snapshot:
-            mmtxyz.append([float(row[0]), float(row[1]), float(row[2])])
+            mmtxyz.append([float(row[1]), float(row[2]), float(row[3])])
     mmtxyz = np.array(mmtxyz).T
     artefact = ArtefactType(
         title=ss_dict["artefact.title"][0],
