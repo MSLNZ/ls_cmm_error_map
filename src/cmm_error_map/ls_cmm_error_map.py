@@ -91,6 +91,7 @@ class MainWindow(qtw.QMainWindow):
         self.control_tree.setContentsMargins(0, 0, 0, 0)
         self.control_tree.header().setStretchLastSection(True)
         self.control_tree.header().setMinimumSectionSize(100)
+        self.control_tree.setStyleSheet(gc.tree_style)
         self.control_tree.setParameters(self.control_group, showTop=False)
         v_split = qtw.QSplitter(qtc.Vertical)
         v_split.addWidget(self.control_tree)

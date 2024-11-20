@@ -230,6 +230,11 @@ dock1d_control_grp = {
     ],
 }
 
+tree_style = """
+            ParameterControlledButton { background: #373330; border: 1px solid #5d5754; padding:5px}
+            ParameterControlledButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
+            """
+
 
 def all_descendants(root, kids=None):
     """
