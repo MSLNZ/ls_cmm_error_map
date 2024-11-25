@@ -111,6 +111,14 @@ class MainWindow(qtw.QMainWindow):
         widget = qtw.QWidget()
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
+        # self.extra_styling()
+
+    def extra_styling(self):
+        """
+        extra style sheets as needed
+        """
+        self.control_tree.setStyleSheet(gc.tree_style)
+        print("extra styling")
 
     def make_machine_controls(self):
         limits = list(self.cmm_models.keys())

@@ -234,6 +234,10 @@ tree_style = """
             ParameterControlledButton { background: #373330; border: 1px solid #5d5754; padding:5px}
             ParameterControlledButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
             """
+add_btn_style = """
+            QPushButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
+            QPushButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
+            """
 
 
 def all_descendants(root, kids=None):
