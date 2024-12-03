@@ -35,6 +35,7 @@ class MainWindow(qtw.QMainWindow):
         self.cmm_models = cf.cmm_models
         self.nprbs = 0
         self.nmmts = 0
+        self.pens = {}
 
         self.plot_docks = {}
         self.plot3d_dock = None
@@ -91,7 +92,6 @@ class MainWindow(qtw.QMainWindow):
         self.control_tree.setContentsMargins(0, 0, 0, 0)
         self.control_tree.header().setStretchLastSection(True)
         self.control_tree.header().setMinimumSectionSize(100)
-        self.control_tree.setStyleSheet(gc.tree_style)
         self.control_tree.setParameters(self.control_group, showTop=False)
         v_split = qtw.QSplitter(qtc.Vertical)
         v_split.addWidget(self.control_tree)
@@ -111,14 +111,17 @@ class MainWindow(qtw.QMainWindow):
         widget = qtw.QWidget()
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
-        # self.extra_styling()
+        self.extra_styling()
 
     def extra_styling(self):
         """
         extra style sheets as needed
+        best done after gui created
         """
         self.control_tree.setStyleSheet(gc.tree_style)
-        print("extra styling")
+        for grp in [self.prb_group, self.mmt_group, self.snapshot_group]:
+            add_btn = list(grp.items.keys())[0].addWidget
+            add_btn.setStyleSheet(gc.add_btn_style)
 
     def make_machine_controls(self):
         limits = list(self.cmm_models.keys())
@@ -333,11 +336,15 @@ class MainWindow(qtw.QMainWindow):
         self.update_measurements()
         self.nmmts += 1
 
-    def update_measurements(self):
+    def update_measurements(self, changes=None, info=None):
         """
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
+        print("in update_measurements")
+        print(f"{changes=}")
+        print(f"{info=}")
+        print(f"{self.pens=}")
         # keep the snapshots
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
@@ -366,9 +373,12 @@ class MainWindow(qtw.QMainWindow):
                 mmt_dev=None,
             )
             self.machine.measurements[mmt_name] = mmt
+            self.pens[mmt_name] = mmt_child.child("pen").pen
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
+            print("calling update_pens")
+            dock.update_pens(self.pens)
             dock.update_measurement_list()
 
         self.replot()
@@ -503,12 +513,13 @@ class MainWindow(qtw.QMainWindow):
         _containers, self.plot_docks = self.dock_area.findAll()
         if name is None:
             name = f"plate{len(self.plot_docks)-1}"
-        print(f"{name=}")
+        # print(f"{name=}")
         new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
+        new_plot_dock.update_pens(self.pens)
 
     def add_new_plot_bar_dock(self, _parameter, name=None):
         """
@@ -605,17 +616,17 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        print(f"{list(self.machine.measurements.keys())=}")
+        print("----------------------")
+        print(f"{self.pens=}")
+        _containers, self.plot_docks = self.dock_area.findAll()
+        print(f"{len(self.plot_docks)}")
+        for name, dock in self.plot_docks.items():
+            print(f"{name}: {dock.pens=}")
+        print("----------------------")
 
 
 def main():
     _app = pg.mkQApp("CMM Error Map App")
-
-    qss = """
-    QPushButton {
-        border-color: #8d604c;
-    }
-    """
 
     qdarktheme.setup_theme(
         "dark",
@@ -624,7 +635,7 @@ def main():
             "list.alternateBackground": "#202124",
             "primary>button.hoverBackground": "#42444a",
         },
-        additional_qss=qss,
+        corner_shape="sharp",
     )
 
     w = MainWindow()

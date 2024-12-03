@@ -8,11 +8,13 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
 
-from pyqtgraph.dockarea.Dock import Dock
+from pyqtgraph.dockarea.Dock import Dock, DockLabel
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 from pyqtgraph.Qt.QtCore import Qt as qtc
 import pyqtgraph.Qt.QtWidgets as qtw
+import pyqtgraph.Qt.QtGui as qtg
+
 
 import cmm_error_map.data_cmpts as dc
 
@@ -175,9 +177,16 @@ mmt_control_grp = {
         },
         grp_location,
         grp_rotation,
+        {
+            "name": "pen",
+            "title": "Colour",
+            "type": "pen",
+            "expanded": False,
+        },
     ],
 }
 
+default_pen = pg.mkPen({"color": "#bbb", "width": 1})
 # parameter structures for 2d plot controls
 
 
@@ -231,7 +240,7 @@ dock1d_control_grp = {
 }
 
 tree_style = """
-            ParameterControlledButton { background: #373330; border: 1px solid #5d5754; padding:5px}
+            ParameterControlledButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
             ParameterControlledButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
             """
 add_btn_style = """
@@ -325,7 +334,7 @@ def plot3d_plate(
     w: gl.GLViewWidget, mmt: dc.Measurement, col="white"
 ) -> list[type[gl.GLGraphicsItem]]:
     """
-    produces a 3d plot of a ballplate ready for updating with location, rotataion, deformation
+    produces a 3d plot of a ballplate ready for updating with location, rotation, deformation
     and magnification by update_plot_plate3d
     """
     # undeformed plate with no transform, zero length probe
@@ -385,13 +394,15 @@ class Plot3dDock(Dock):
     """
 
     def __init__(self, name: str, machine: dc.Machine):
-        super(Plot3dDock, self).__init__(name)
+        label1 = CustomDockLabel(name, closable=False)
+        super(Plot3dDock, self).__init__(name, label=label1, closable=False)
 
         self.magnification = 5000
         self.machine = machine
 
         self.plot_data: dict[str, list[gl.GLLinePlotItem]] = {}
         self.box_lineplot: gl.GLLinePlotItem = None
+        self.pens: dict[str, list[qtg.QPen]] = {}
 
         self.plot_widget = gl.GLViewWidget()
         self.add_control_tree()
@@ -413,7 +424,7 @@ class Plot3dDock(Dock):
         limits = [value.title for value in self.machine.measurements.values()]
         self.mmts_to_plot.setLimits(limits)
 
-        self.mmts_to_plot.sigValueChanged.connect(self.replot)
+        self.mmts_to_plot.sigValueChanged.connect(self.update_mmts_plotted)
 
         self.probe_box = self.plot_controls.child("probe_box")
         probe_choices = {value.title: key for key, value in self.machine.probes.items()}
@@ -429,6 +440,11 @@ class Plot3dDock(Dock):
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.setVerticalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
         self.tree.move(0, 0)
+
+    def update_mmts_plotted(self):
+        print("in update_mmts_plotted")
+        self.update_pens(self.pens)
+        self.replot()
 
     def update_plot_plates(self):
         """
@@ -447,6 +463,7 @@ class Plot3dDock(Dock):
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot3d_plate(self.plot_widget, mmt)
+                    self.update_pens(self.pens)
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
@@ -480,6 +497,14 @@ class Plot3dDock(Dock):
         self.box_lineplot = None
         self.plot_data = {}
 
+    def update_pens(self, pens):
+        self.pens = pens
+        for mmt_name, list_items in self.plot_data.items():
+            balls, lines = list_items
+            col = self.pens[mmt_name].color()
+            print(f"setting line color to {col}")
+            lines.setData(color=col)
+
     def replot(self):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
@@ -497,15 +522,16 @@ class Plot3dDock(Dock):
 
 
 def plot2d_plate(
-    w: pg.PlotWidget, mmt: dc.Measurement, col="white"
+    w: pg.PlotWidget,
+    mmt: dc.Measurement,
 ) -> list[pg.PlotDataItem]:
     """
     pyqtgraph 2d plot of ballplate errors
     basic undeformed plot
     """
-
-    balls = pg.PlotDataItem(color=pg.mkColor(col), size=20, symbol="o", pen=None)
-    lines = pg.PlotDataItem(color=pg.mkColor(col), connect="pairs")
+    col = "white"
+    balls = pg.PlotDataItem(symbolBrush=pg.mkColor(col), size=20, symbol="o", pen=None)
+    lines = pg.PlotDataItem(pen=pg.mkColor(col), connect="pairs")
 
     update_plot2d_plate(balls, lines, mmt, magnification=1.0)
     w.addItem(balls)
@@ -573,11 +599,13 @@ class PlotPlateDock(Dock):
     """
 
     def __init__(self, name, machine):
-        super(PlotPlateDock, self).__init__(name, closable=True)
+        label1 = CustomDockLabel(name, closable=True)
+        super(PlotPlateDock, self).__init__(name, label=label1, closable=True)
 
         self.magnification = 5000
         self.machine = machine
         self.dock_name = name
+        self.pens = {}
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
@@ -599,7 +627,7 @@ class PlotPlateDock(Dock):
 
         self.mmts_to_plot = self.plot_controls.child("mmts_to_plot")
         self.update_measurement_list()
-        self.mmts_to_plot.sigValueChanged.connect(self.replot)
+        self.mmts_to_plot.sigValueChanged.connect(self.update_display)
 
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
@@ -613,6 +641,20 @@ class PlotPlateDock(Dock):
 
     def update_machine(self, machine: dc.Machine):
         self.machine = machine
+
+    def update_display(self):
+        print("update display")
+        self.update_pens(self.pens)
+        self.replot()
+
+    def update_pens(self, pens):
+        print("plate update pens")
+        self.pens = pens
+        print(f"{self.pens=}")
+        for mmt_name, list_items in self.plot_data.items():
+            balls, lines = list_items
+            lines.setPen(self.pens[mmt_name])
+            balls.setSymbolPen(self.pens[mmt_name])
 
     def update_measurement_list(self):
         """
@@ -655,8 +697,12 @@ class PlotPlateDock(Dock):
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot2d_plate(self.plot_widget, mmt)
+                    self.update_pens(self.pens)
 
                 # update plot
+                print(f"{self.pens=}")
+                print(f"{mmt.title=}")
+
                 balls, lines = self.plot_data[mmt_name]
                 update_plot2d_plate(
                     balls,
@@ -674,7 +720,8 @@ class PlotBarDock(Dock):
     """
 
     def __init__(self, name, machine):
-        super(PlotBarDock, self).__init__(name, closable=True)
+        label1 = CustomDockLabel(name, closable=True)
+        super(PlotBarDock, self).__init__(name, label=label1, closable=True)
 
         self.machine = machine
         self.dock_name = name
@@ -874,3 +921,55 @@ class SaveSimulationDialog(qtw.QDialog):
         self.readme_text = self.readme.toPlainText()
         self.filenames = self.files.get_filenames()
         super().accept()
+
+
+class CustomDockLabel(DockLabel):
+    def __init__(self, text, closable=True, fontSize="14px"):
+        super(CustomDockLabel, self).__init__(text, closable, fontSize)
+
+    def updateStyle(self):
+        r = "1px"
+        if self.dim:
+            fg = "#aaa"
+            bg = "#4f2f21"
+            border = "#42444a"
+        else:
+            fg = "#fff"
+            bg = "#f07845"
+            border = "#42444a"
+
+        if self.orientation == "vertical":
+            self.vStyle = """DockLabel {
+                background-color : %s;
+                color : %s;
+                border-top-right-radius: 0px;
+                border-top-left-radius: %s;
+                border-bottom-right-radius: 0px;
+                border-bottom-left-radius: %s;
+                border-width: 0px;
+                border-right: 1px solid %s;
+                padding-top: 3px;
+                padding-bottom: 3px;
+                padding-left: 3px;
+                padding-right: 3px;
+                font-size: %s;
+            }""" % (bg, fg, r, r, border, self.fontSize)
+            self.setStyleSheet(self.vStyle)
+        else:
+            self.hStyle = """DockLabel {
+                background-color : %s;
+                color : %s;
+                border-top-right-radius: %s;
+                border-top-left-radius: %s;
+                border-bottom-right-radius: 0px;
+                border-bottom-left-radius: 0px;
+                border-width: 0px;
+                border-bottom: 1px solid %s;
+                padding-top: 0px;
+                padding-bottom: 0px;
+                padding-left: 3px;
+                padding-right: 3px;
+                font-size: %s;
+
+            }""" % (bg, fg, r, r, border, self.fontSize)
+            self.setStyleSheet(self.hStyle)
