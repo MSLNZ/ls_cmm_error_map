@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 import datetime as dt
 
-import json
+import pickle
 import numpy as np
 import pyqtgraph as pg
 
@@ -552,14 +552,20 @@ class MainWindow(qtw.QMainWindow):
 
     def save_state(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(
-            self, "Save File", filter="config files (*.json)"
+            self, "Save File", dir="config.pkl", filter="pickle files (*.pkl)"
         )
 
         if not filename:
             return
-
+        if Path(filename).suffix == "":
+            filename = filename + ".pkl"
         state_dict = {}
         state_dict["main_state"] = self.control_group.saveState(filter="user")
+        state_dict["counts"] = {
+            "probes": len(self.prb_group.children()),
+            "simulations": len(self.mmt_group.children()),
+            "snapshots": len(self.snapshot_group.children()),
+        }
         state_dict["dock_area"] = self.dock_area.saveState()
         state_dict["docks"] = {}
 
@@ -568,19 +574,34 @@ class MainWindow(qtw.QMainWindow):
             state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
                 filter="user"
             )
-
-        with open(filename, "w") as fp:
-            json.dump(state_dict, fp, indent=4)
+        with open(filename, "wb") as fp:
+            pickle.dump(state_dict, fp)
 
     def restore_state(self):
         filename, _ = qtw.QFileDialog.getOpenFileName(
-            self, filter="config files (*.json)"
+            self, filter="config files (*.pkl)"
         )
         if not filename:
             return
 
-        with open(filename, "r") as fp:
-            state_dict = json.load(fp)
+        with open(filename, "rb") as fp:
+            state_dict = pickle.load(fp)
+
+        # main control panel
+        # remove existing children
+        self.prb_group.clearChildren()
+        self.mmt_group.clearChildren()
+        self.snapshot_group.clearChildren()
+        # add the right number back
+        for i in range(state_dict["counts"]["probes"]):
+            self.add_new_probe_group(self.prb_group)
+        for i in range(state_dict["counts"]["simuations"]):
+            self.add_new_mmt_group(self.mmt_group)
+        for i in range(state_dict["counts"]["snapshots"]):
+            self.add_new_snapshot_group(self.snapshot_group)
+
+        # restore state of main control panel
+        self.control_group.restoreState(state_dict["main_state"])
 
         # remove any existing docks
         for dock in self.plot_docks.values():
@@ -589,7 +610,6 @@ class MainWindow(qtw.QMainWindow):
                 del dock
 
         _containers, self.plot_docks = self.dock_area.findAll()
-        self.control_group.restoreState(state_dict["main_state"])
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
                 self.add_new_plot_plate_dock(None, name=dock_name)
@@ -617,11 +637,8 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print("----------------------")
-        print(f"{self.pens=}")
-        _containers, self.plot_docks = self.dock_area.findAll()
-        print(f"{len(self.plot_docks)}")
-        for name, dock in self.plot_docks.items():
-            print(f"{name}: {dock.pens=}")
+        print(f"{self.mmt_group.children()=}")
+        print(f"{len(self.mmt_group.children())=}")
         print("----------------------")
 
 
