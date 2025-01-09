@@ -29,3 +29,11 @@ nballs = [
     1,
 ]
 ball_spacing = 20.0
+
+["APMP.L-S54n01.1"]
+title = "APMP.L-S54n01.1"
+nballs = [
+    8,
+    8,
+]
+ball_spacing = 50.0
