@@ -341,10 +341,10 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
-        print("in update_measurements")
-        print(f"{changes=}")
-        print(f"{info=}")
-        print(f"{self.pens=}")
+        # print("in update_measurements")
+        # print(f"{changes=}")
+        # print(f"{info=}")
+        # print(f"{self.pens=}")
         # keep the snapshots
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
@@ -377,14 +377,14 @@ class MainWindow(qtw.QMainWindow):
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
-            print("calling update_pens")
+            # print("calling update_pens")
             dock.update_pens(self.pens)
             dock.update_measurement_list()
 
         self.replot()
 
     def save_mmt(self, mmt: dc.Measurement):
-        print(f"Saving simulation {mmt.name}, artefact {mmt.artefact.title}")
+        # print(f"Saving simulation {mmt.name}, artefact {mmt.artefact.title}")
         dialog = gc.SaveSimulationDialog()
         if dialog.exec() == qtw.QDialog.Accepted:
             now = dt.datetime.now().isoformat(sep=" ")
