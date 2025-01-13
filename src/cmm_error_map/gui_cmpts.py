@@ -499,11 +499,13 @@ class Plot3dDock(Dock):
 
     def update_pens(self, pens):
         self.pens = pens
-        for mmt_name, list_items in self.plot_data.items():
-            balls, lines = list_items
-            col = self.pens[mmt_name].color()
-            print(f"setting line color to {col}")
-            lines.setData(color=col)
+        if len(self.plot_data) > 0:
+            for mmt_name, list_items in self.plot_data.items():
+                balls, lines = list_items
+                col = self.pens[mmt_name].color()
+                print(f"setting line color to {col}")
+                lines.setData(color=col)
+
 
     def replot(self):
         """

@@ -36,7 +36,7 @@ class MainWindow(qtw.QMainWindow):
         self.nprbs = 0
         self.nmmts = 0
         self.pens = {}
-
+        self.restoring = False
         self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
@@ -135,6 +135,8 @@ class MainWindow(qtw.QMainWindow):
         self.machine_group.sigTreeStateChanged.connect(self.update_machine)
 
     def update_machine(self):
+        if self.restoring:
+            return
         self.machine = dc.Machine(
             cmm_model=self.cmm_models[self.machine_group.value()],
             boxes={},
@@ -150,12 +152,6 @@ class MainWindow(qtw.QMainWindow):
             slider_value = axis_group.child(control_name).value()
             self.machine.model_params[control_name] = slider_value * slider_factor
 
-        # update the references in the plot docks
-        # if self.plot3d_dock:
-        #     self.plot3d_dock.update_machine(self.machine)
-
-        # for dock in self.plot_mmt_docks:
-        #     dock.update_machine(self.machine)
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
@@ -164,6 +160,7 @@ class MainWindow(qtw.QMainWindow):
         # this will call replot twice - optimize if needed
         self.update_probes()
         self.update_measurements()
+        self.update_prb_lists()
 
     def make_model_sliders(self) -> Parameter:
         # create sliders
@@ -206,6 +203,8 @@ class MainWindow(qtw.QMainWindow):
         """
         event callback for sliders
         """
+        if self.restoring:
+            return
         control_name = changes[0][0].name()
         slider_value = changes[0][2]
         if control_name in dc.model_parameters_dict.keys():
@@ -267,6 +266,8 @@ class MainWindow(qtw.QMainWindow):
         """
         recreates self.machine.probes from gui controls in self.probes_group
         """
+        if self.restoring:
+            return
         self.machine.probes = {}
         spacing = self.machine.cmm_model.box_spacing
         size = self.machine.cmm_model.size
@@ -341,11 +342,19 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
+        # print('=======================')
         # print("in update_measurements")
         # print(f"{changes=}")
         # print(f"{info=}")
         # print(f"{self.pens=}")
+        # if self.plot3d_dock:
+        #     print(f"{self.plot3d_dock.pens=}")
+        # else:
+        #     print('no 3d dock yet')
+        # print('=======================')
         # keep the snapshots
+        if self.restoring:
+            return
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
         }
@@ -358,6 +367,12 @@ class MainWindow(qtw.QMainWindow):
             vloc = [grand_kid.value() for grand_kid in grp_loc]
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
+
+
+            print('=======================')
+            print(f"{self.machine.probes=}")
+            print(f'{mmt_child.child("probe").value()=}')
+            print('=======================')
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mat = dc.matrix_from_vectors(vloc, vrot)
@@ -475,6 +490,8 @@ class MainWindow(qtw.QMainWindow):
         self.update_prb_lists()
 
     def update_prb_lists(self):
+        if self.restoring:
+            return
         try:
             self.update_measurements()
             # update probe titles in measurement lists
@@ -484,7 +501,11 @@ class MainWindow(qtw.QMainWindow):
                 }
                 mmt_child.child("probe").setLimits(prb_limits)
             # update probe titles in 3d dock list
-            self.plot3d_dock.probe_box.setLimits(prb_limits)
+            if len(self.mmt_group.children()) > 0:
+                # print('=========================')
+                # print(f"{prb_limits=}")
+                # print('=========================')
+                self.plot3d_dock.probe_box.setLimits(prb_limits)
 
         except AttributeError:
             # no mmt group yet
@@ -503,6 +524,7 @@ class MainWindow(qtw.QMainWindow):
         """
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
+        self.update_measurements()
 
     def add_new_plot_plate_dock(self, _parameter, name=None):
         """
@@ -578,6 +600,7 @@ class MainWindow(qtw.QMainWindow):
             pickle.dump(state_dict, fp)
 
     def restore_state(self):
+        self.restoring = True
         filename, _ = qtw.QFileDialog.getOpenFileName(
             self, filter="config files (*.pkl)"
         )
@@ -592,10 +615,17 @@ class MainWindow(qtw.QMainWindow):
         self.prb_group.clearChildren()
         self.mmt_group.clearChildren()
         self.snapshot_group.clearChildren()
+
+        self.nprbs = 0
+        self.nmmts = 0
+        self.pens = {}
+
+
+
         # add the right number back
         for i in range(state_dict["counts"]["probes"]):
             self.add_new_probe_group(self.prb_group)
-        for i in range(state_dict["counts"]["simuations"]):
+        for i in range(state_dict["counts"]["simulations"]):
             self.add_new_mmt_group(self.mmt_group)
         for i in range(state_dict["counts"]["snapshots"]):
             self.add_new_snapshot_group(self.snapshot_group)
@@ -604,11 +634,12 @@ class MainWindow(qtw.QMainWindow):
         self.control_group.restoreState(state_dict["main_state"])
 
         # remove any existing docks
+
         for dock in self.plot_docks.values():
             if dock.dock_name != "3D Deformation":
                 dock.close()
                 del dock
-
+  
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
@@ -624,6 +655,8 @@ class MainWindow(qtw.QMainWindow):
                 raise ValueError("Unknown dock type")
 
         self.dock_area.restoreState(state_dict["dock_area"])
+        self.restoring = False
+        self.update_machine()
 
     def add_summary(self):
         text = "Summary\n"
@@ -637,8 +670,8 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print("----------------------")
-        print(f"{self.mmt_group.children()=}")
-        print(f"{len(self.mmt_group.children())=}")
+        print(f"{self.pens=}")
+        print(f"{self.plot3d_dock.pens=}")
         print("----------------------")
 
 
