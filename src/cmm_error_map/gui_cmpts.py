@@ -531,13 +531,26 @@ def plot2d_plate(
     pyqtgraph 2d plot of ballplate errors
     basic undeformed plot
     """
+    # fixed grid
     col = "white"
+    grid = pg.PlotDataItem(pen=pg.mkColor(col), connect="pairs")
+    xy = mmt.mmt_nominal
+    nx, ny = mmt.artefact.nballs
+    ind = np.arange(nx * ny).reshape((ny, nx))
+    indx = np.repeat(ind, 2, axis=1)[:, 1:-1].flatten()
+    indy = np.repeat(ind, 2, axis=0)[1:-1, :].T.flatten()
+    ind_lines = np.hstack((indx, indy))
+    pos = xy[:2, ind_lines]
+    grid.setData(pos.T)
+
+    # plate
     balls = pg.PlotDataItem(symbolBrush=pg.mkColor(col), size=20, symbol="o", pen=None)
     lines = pg.PlotDataItem(pen=pg.mkColor(col), connect="pairs")
 
     update_plot2d_plate(balls, lines, mmt, magnification=1.0)
     w.addItem(balls)
     w.addItem(lines)
+    w.addItem(grid)
 
     return [balls, lines]
 
