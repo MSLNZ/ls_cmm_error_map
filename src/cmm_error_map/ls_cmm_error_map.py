@@ -369,10 +369,10 @@ class MainWindow(qtw.QMainWindow):
             vrot = [grand_kid.value() for grand_kid in grp_rot]
 
 
-            print('=======================')
-            print(f"{self.machine.probes=}")
-            print(f'{mmt_child.child("probe").value()=}')
-            print('=======================')
+            # print('=======================')
+            # print(f"{self.machine.probes=}")
+            # print(f'{mmt_child.child("probe").value()=}')
+            # print('=======================')
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
             mat = dc.matrix_from_vectors(vloc, vrot)

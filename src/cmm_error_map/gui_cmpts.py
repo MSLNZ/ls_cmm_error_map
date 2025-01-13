@@ -442,7 +442,7 @@ class Plot3dDock(Dock):
         self.tree.move(0, 0)
 
     def update_mmts_plotted(self):
-        print("in update_mmts_plotted")
+        # print("in update_mmts_plotted")
         self.update_pens(self.pens)
         self.replot()
 
@@ -503,7 +503,7 @@ class Plot3dDock(Dock):
             for mmt_name, list_items in self.plot_data.items():
                 balls, lines = list_items
                 col = self.pens[mmt_name].color()
-                print(f"setting line color to {col}")
+                # print(f"setting line color to {col}")
                 lines.setData(color=col)
 
 
@@ -586,11 +586,10 @@ def update_plot1d_bar(
     x = mmt.mmt_nominal[0, :]
     y = mmt.mmt_dev[0, :]
     xy = np.stack((x, y))
-    print(f"{xy[:, -1]=}")
+
     balls.setData(xy.T)
     lines.setData(xy.T)
-    print(f"{balls.dataRect()=}")
-    print(f"{lines.dataRect()=}")
+
 
 
 class PlotPlateDock(Dock):
@@ -645,14 +644,14 @@ class PlotPlateDock(Dock):
         self.machine = machine
 
     def update_display(self):
-        print("update display")
+        # print("update display")
         self.update_pens(self.pens)
         self.replot()
 
     def update_pens(self, pens):
-        print("plate update pens")
+        # print("plate update pens")
         self.pens = pens
-        print(f"{self.pens=}")
+        # print(f"{self.pens=}")
         for mmt_name, list_items in self.plot_data.items():
             balls, lines = list_items
             lines.setPen(self.pens[mmt_name])
@@ -702,8 +701,8 @@ class PlotPlateDock(Dock):
                     self.update_pens(self.pens)
 
                 # update plot
-                print(f"{self.pens=}")
-                print(f"{mmt.title=}")
+                # print(f"{self.pens=}")
+                # print(f"{mmt.title=}")
 
                 balls, lines = self.plot_data[mmt_name]
                 update_plot2d_plate(
@@ -780,7 +779,7 @@ class PlotBarDock(Dock):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
-        print("In bar replot")
+        # print("In bar replot")
         for mmt_name, mmt in self.machine.measurements.items():
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
@@ -796,7 +795,7 @@ class PlotBarDock(Dock):
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
-                print("...updating")
+                # print("...updating")
                 update_plot1d_bar(
                     balls,
                     lines,
