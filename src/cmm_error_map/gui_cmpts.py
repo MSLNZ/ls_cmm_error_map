@@ -548,9 +548,10 @@ def plot2d_plate(
     lines = pg.PlotDataItem(pen=pg.mkColor(col), connect="pairs")
 
     update_plot2d_plate(balls, lines, mmt, magnification=1.0)
+    w.addItem(grid)
     w.addItem(balls)
     w.addItem(lines)
-    w.addItem(grid)
+    
 
     return [balls, lines]
 

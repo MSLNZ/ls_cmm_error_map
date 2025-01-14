@@ -10,6 +10,7 @@
 # Licence:     <your licence>
 # -------------------------------------------------------------------------------
 import pickle
+
 import numpy as np
 
 ballspacing = 133.0
@@ -138,7 +139,7 @@ def modelled_mmts(mmtinfo, params):
     return y
 
 
-def modelled_mmts_XYZ(RP, xt, yt, zt, params):
+def modelled_mmts_XYZ(RP, xt, yt, zt, params, verbose=False):
     """
      for a plate transformation matrix RP,
      a probe xt,yt,zt and a set of 21 parameters, produces an expected set of
@@ -154,6 +155,8 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params):
           (xn,yn,zn) is the direction perpendicular to the plate (plate Z axis)
           (x0,y0,z0) is the machine position of ball 1
 
+    verbose = True
+    returns dXY.T, XYZm, XYZp
     """
     ballnumber = np.arange(25)
 
@@ -188,8 +191,12 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params):
         ]
     )
     XYZp = np.dot(RZ, XYZp)
-    dXY = XYZp[:2, :] - np.vstack((xp, yp))
-    return dXY.T
+    plate_nom = np.vstack((xp, yp))
+    dXY = XYZp[:2, :] - plate_nom
+    if verbose:
+        return dXY.T, XYZm, XYZp, XM, plate_nom
+    else:
+        return dXY.T
 
 
 def machine_deformation(params, xt, yt, zt, spacing=200):
