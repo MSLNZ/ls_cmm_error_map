@@ -21,11 +21,9 @@ A **Probe** has
 """
 
 import csv
-
-from pathlib import Path
 import datetime as dt
-
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import scipy.spatial.transform as st
@@ -186,7 +184,7 @@ class Measurement:
         if ny == 1:
             mmt_deform = cmm_to_bar_csy(cmm_deform, self.artefact)
         else:
-            mmt_deform = cmm_to_plate_csy(cmm_deform, self.artefact)
+            mmt_deform = cmm_to_plate_csy(self)
 
         self.mmt_dev = mmt_deform - self.mmt_nominal
 
@@ -216,40 +214,40 @@ def matrix_to_vectors(transform_mat):
     return vloc, vrot
 
 
-def cmm_to_plate_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
+def cmm_to_plate_csy(mmt: Measurement):
     """
     transform cmm_deform to plate CSY
 
     origin point ball 0
     z-plane through balls 0, 4, 20
     x-axis through balls 0, 4
+
+    previous code calculating a matrix directly from axis vectors
+    suffered from round off errors
     """
-    nx, ny = artefact.nballs
-    xindex = nx - 1
-    yindex = nx * (ny - 1)
-    xyz0 = cmm_deform[:, 0]
-    vx = cmm_deform[:, xindex] - xyz0
-    vy = cmm_deform[:, yindex] - xyz0
 
-    vx = vx / np.linalg.norm(vx)
-    vy = vy / np.linalg.norm(vy)
-    vz = np.cross(vx, vy)
-    vz = vz / np.linalg.norm(vz)
-
-    mat = np.array(
+    # transfer to plate CSY
+    cmm_deform = mmt.cmm_nominal + mmt.cmm_dev
+    cmm_deform1 = np.vstack((cmm_deform, np.ones_like(cmm_deform[0, :])))
+    XYZp = np.dot(np.linalg.inv(mmt.transform_mat), cmm_deform1)
+    # subtract ball 1 row from each position
+    XYZp[:3, :] = XYZp[:3, :] - XYZp[:3, 0:1]
+    # also rotate about plate z so y=0 for ball 5
+    ang = -1.0 * np.arctan2(XYZp[1, 4], XYZp[0, 4])
+    cang = np.cos(ang)
+    sang = np.sin(ang)
+    RZ = np.array(
         [
-            [vx[0], vy[0], vz[0], xyz0[0]],
-            [vx[1], vy[1], vz[1], xyz0[1]],
-            [vx[2], vy[2], vz[2], xyz0[2]],
+            [cang, -sang, 0.0, 0.0],
+            [sang, cang, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0],
         ]
     )
+    XYZp = np.dot(RZ, XYZp)
 
-    inv_mat = np.linalg.inv(mat)
-    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, nx * ny))))
-    mmt_deform = inv_mat @ cmm_deform1
-
-    return mmt_deform[:3, :]
+    mmt_deform = XYZp[:3, :]
+    return mmt_deform
 
 
 def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):

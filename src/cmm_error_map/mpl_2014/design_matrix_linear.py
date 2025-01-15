@@ -194,7 +194,7 @@ def modelled_mmts_XYZ(RP, xt, yt, zt, params, verbose=False):
     plate_nom = np.vstack((xp, yp))
     dXY = XYZp[:2, :] - plate_nom
     if verbose:
-        return dXY.T, XYZm, XYZp, XM, plate_nom
+        return dXY.T, eXYZ, XYZp, XM, plate_nom
     else:
         return dXY.T
 
