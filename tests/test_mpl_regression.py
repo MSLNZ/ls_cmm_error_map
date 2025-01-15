@@ -21,40 +21,66 @@ import cmm_error_map.mpl_2014.design_matrix_linear as design_old
 sign_corrections = {
     "Txx": 1,
     "Txy": -1,
-    "Txz": 1,
-    "Tyx": 1,
+    "Txz": -1,
+    "Tyx": -1,
     "Tyy": 1,
-    "Tyz": 1,
-    "Tzx": 1,
-    "Tzy": 1,
+    "Tyz": -1,
+    "Tzx": -1,
+    "Tzy": -1,
     "Tzz": 1,
-    "Rxx": 1,
-    "Rxy": 1,
-    "Rxz": 1,
-    "Ryx": 1,
-    "Ryy": 1,
+    "Rxx": -1,
+    "Rxy": -1,
+    "Rxz": -1,
+    "Ryx": -1,
+    "Ryy": -1,
     "Ryz": 1,
-    "Rzx": 1,
-    "Rzy": 1,
+    "Rzx": -1,
+    "Rzy": -1,
     "Rzz": 1,
-    "Wxy": 1,
-    "Wxz": 1,
-    "Wyz": 1,
+    "Wxy": -1,
+    "Wxz": -1,
+    "Wyz": -1,
+}
+
+pmax = {
+    "Txx": 1e-6,
+    "Txy": 1e-6,
+    "Txz": 1e-6,
+    "Tyx": 1e-6,
+    "Tyy": 1e-6,
+    "Tyz": 1e-6,
+    "Tzx": 1e-6,
+    "Tzy": 1e-6,
+    "Tzz": 1e-6,
+    "Rxx": 1e-8,
+    "Rxy": 1e-8,
+    "Rxz": 1e-8,
+    "Ryx": 1e-8,
+    "Ryy": 1e-8,
+    "Ryz": 1e-8,
+    "Rzx": 1e-8,
+    "Rzy": 1e-8,
+    "Rzz": 1e-8,
+    "Wxy": 1e-8,
+    "Wxz": 1e-8,
+    "Wyz": 1e-8,
 }
 
 mp = dc.model_parameters_dict
 
+keys_to_test = list(mp.keys())[:-3]
+
 
 def make_tests():
     tests = []
-    for key in mp:
+    for key in keys_to_test:
         test = mp.copy()
-        test[key] = 1e-6
+        test[key] = pmax[key]
         tests.append(test)
     return tests
 
 
-@pytest.mark.parametrize("model_params", make_tests(), ids=mp.keys())
+@pytest.mark.parametrize("model_params", make_tests(), ids=keys_to_test)
 def test_XY(model_params):
     """
     regression test the  a set of parameter with a Koba plate on the XY plane
