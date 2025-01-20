@@ -3,26 +3,24 @@ main gui for cmm error map app
 0oOilL1I| 0123456789
 """
 
+import datetime as dt
+import pickle
 import sys
 from pathlib import Path
-import datetime as dt
 
-import pickle
 import numpy as np
 import pyqtgraph as pg
-
 import pyqtgraph.Qt.QtWidgets as qtw
-from pyqtgraph.Qt.QtCore import Qt as qtc
+
 # import pyqtgraph.Qt.QtGui as qtg
-
 import qdarktheme
-
 from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pyqtgraph.Qt.QtCore import Qt as qtc
 
-import cmm_error_map.gui_cmpts as gc
-import cmm_error_map.data_cmpts as dc
 import cmm_error_map.config.config as cf
+import cmm_error_map.data_cmpts as dc
+import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
 DEBUG = True
@@ -151,7 +149,6 @@ class MainWindow(qtw.QMainWindow):
             axis_group = self.slider_group.child(axis_children[axis_id])
             slider_value = axis_group.child(control_name).value()
             self.machine.model_params[control_name] = slider_value * slider_factor
-
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
@@ -368,7 +365,6 @@ class MainWindow(qtw.QMainWindow):
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
 
-
             # print('=======================')
             # print(f"{self.machine.probes=}")
             # print(f'{mmt_child.child("probe").value()=}')
@@ -534,7 +530,7 @@ class MainWindow(qtw.QMainWindow):
         """
         _containers, self.plot_docks = self.dock_area.findAll()
         if name is None:
-            name = f"plate{len(self.plot_docks)-1}"
+            name = f"plate{len(self.plot_docks) - 1}"
         # print(f"{name=}")
         new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
@@ -620,8 +616,6 @@ class MainWindow(qtw.QMainWindow):
         self.nmmts = 0
         self.pens = {}
 
-
-
         # add the right number back
         for i in range(state_dict["counts"]["probes"]):
             self.add_new_probe_group(self.prb_group)
@@ -639,7 +633,7 @@ class MainWindow(qtw.QMainWindow):
             if dock.dock_name != "3D Deformation":
                 dock.close()
                 del dock
-  
+
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
@@ -669,10 +663,23 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        print("----------------------")
-        print(f"{self.pens=}")
-        print(f"{self.plot3d_dock.pens=}")
-        print("----------------------")
+        import cmm_error_map.mpl_2014.design_matrix_linear as design_old
+
+        with open("/home/elfnor/gits/ls_cmm_error_map/notebooks/mmts.pkl", "wb") as fp:
+            pickle.dump(self.machine.measurements, fp)
+        print("======================")
+        print(self.machine.model_params)
+        params = list(self.machine.model_params.values())
+        for mmt in self.machine.measurements.values():
+            print("======================")
+            print(f"mmt {mmt.title}, {mmt.name}")
+            print("ball 25")
+            print(f"new {mmt.mmt_dev[:, -1]=}")
+            xt, yt, zt = mmt.probe.length
+            dxy = design_old.modelled_mmts_XYZ(mmt.transform_mat, xt, yt, zt, params)
+            print(f"old {dxy[-1, :]=}")
+            print(f"{mmt.transform_mat}")
+            print("======================")
 
 
 def main():
