@@ -6,6 +6,7 @@ refactor out setup  code later
 """
 
 import numpy as np
+import numpy.testing as npt
 import pytest
 
 import cmm_error_map.config.config as cf
@@ -198,10 +199,10 @@ def test_XYZ_regression(model_params, mmt):
         mmt.transform_mat, xt, yt, zt, params, verbose=True
     )
     # testing
-    np.testing.assert_allclose(XM[:-1, :], mmt.cmm_nominal, atol=abs_tol)
-    np.testing.assert_allclose(eXYZ[:-1, :], mmt.cmm_dev, atol=abs_tol)
-    np.testing.assert_allclose(plate_nom, mmt.mmt_nominal[:-1, :], atol=abs_tol)
-    np.testing.assert_allclose(dxy.T, mmt.mmt_dev[:-1, :], atol=abs_tol)
+    npt.assert_allclose(XM[:-1, :], mmt.cmm_nominal, atol=abs_tol)
+    npt.assert_allclose(eXYZ[:-1, :], mmt.cmm_dev, atol=abs_tol)
+    npt.assert_allclose(plate_nom, mmt.mmt_nominal[:-1, :], atol=abs_tol)
+    npt.assert_allclose(dxy.T, mmt.mmt_dev[:-1, :], atol=abs_tol)
     return
 
 
@@ -215,10 +216,8 @@ def test_plate_csy(model_params, mmt):
     mmt.recalculate(model_params, cmm.cmm_model)
     mmt_deform = mmt.mmt_nominal + mmt.mmt_dev
     # Ball 1 is at (0, 0, 0)
-    np.testing.assert_allclose(
-        mmt_deform[:, 0], np.array([0.0, 0.0, 0.0]), atol=abs_tol
-    )
+    npt.assert_allclose(mmt_deform[:, 0], np.array([0.0, 0.0, 0.0]), atol=abs_tol)
     # Ball 5 is at  (x, 0, 0)
-    np.testing.assert_allclose(mmt_deform[1:, 4], np.array([0.0, 0.0]), atol=abs_tol)
+    npt.assert_allclose(mmt_deform[1:, 4], np.array([0.0, 0.0]), atol=abs_tol)
     # Ball 21 is at  (x, y, 0)
-    np.testing.assert_allclose(mmt_deform[2, 20], 0.0, atol=abs_tol)
+    npt.assert_allclose(mmt_deform[2, 20], 0.0, atol=abs_tol)

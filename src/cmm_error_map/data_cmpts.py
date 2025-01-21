@@ -219,7 +219,7 @@ def matrix_from_3_points(
     corner_inds: list[int],
 ):
     """
-    takes an array of points and returns the matrix that will transform the points
+    takes an array of points and returns the matrix (4 x 4) that will transform the points
     to a CSY with
     origin at the point corner_inds[0]
     the x-axis through corner_inds[0]] and corner_inds[1]
