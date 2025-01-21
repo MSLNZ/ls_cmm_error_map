@@ -19,7 +19,7 @@ import cmm_error_map.mpl_2014.design_matrix_linear as design_old
 # so the results match the new code
 # the pattern is consistent - Txx, Tyy, Tzz have the same sign all others are reversed
 
-abs_tol = 1e-6
+abs_tol = 1e-7  # 0.1 nm
 
 sign_corrections = {
     "Txx": 1,

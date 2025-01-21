@@ -214,6 +214,44 @@ def matrix_to_vectors(transform_mat):
     return vloc, vrot
 
 
+def matrix_from_3_points(
+    points: np.ndarray,  # (3 or 4, n)
+    corner_inds: list[int],
+):
+    """
+    takes an array of points and returns the matrix that will transform the points
+    to a CSY with
+    origin at the point corner_inds[0]
+    the x-axis through corner_inds[0]] and corner_inds[1]
+    and the z-plane  corner_inds[0], corner_inds[1] and corner_inds[2]
+    where corner_inds are the indicies within points
+    This is a specific case of a point line plane alignment
+    """
+    xyz0 = points[:3, corner_inds[0]]
+    vx = points[:3, corner_inds[1]] - xyz0
+    vy = points[:3, corner_inds[2]] - xyz0
+
+    vz = np.cross(vx, vy)
+    vy = np.cross(vz, vx)
+
+    vx = vx / np.linalg.norm(vx)
+    vy = vy / np.linalg.norm(vy)
+    vz = vz / np.linalg.norm(vz)
+
+    mat = np.array(
+        [
+            [vx[0], vy[0], vz[0], xyz0[0]],
+            [vx[1], vy[1], vz[1], xyz0[1]],
+            [vx[2], vy[2], vz[2], xyz0[2]],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    inv_mat = np.linalg.inv(mat)
+
+    return inv_mat
+
+
 def cmm_to_plate_csy(mmt: Measurement):
     """
     transform cmm_deform to plate CSY
@@ -221,33 +259,17 @@ def cmm_to_plate_csy(mmt: Measurement):
     origin point ball 0
     z-plane through balls 0, 4, 20
     x-axis through balls 0, 4
-
-    previous code calculating a matrix directly from axis vectors
-    suffered from round off errors
     """
-
-    # transfer to plate CSY
     cmm_deform = mmt.cmm_nominal + mmt.cmm_dev
-    cmm_deform1 = np.vstack((cmm_deform, np.ones_like(cmm_deform[0, :])))
-    XYZp = np.dot(np.linalg.inv(mmt.transform_mat), cmm_deform1)
-    # subtract ball 1 row from each position
-    XYZp[:3, :] = XYZp[:3, :] - XYZp[:3, 0:1]
-    # also rotate about plate z so y=0 for ball 5
-    ang = -1.0 * np.arctan2(XYZp[1, 4], XYZp[0, 4])
-    cang = np.cos(ang)
-    sang = np.sin(ang)
-    RZ = np.array(
-        [
-            [cang, -sang, 0.0, 0.0],
-            [sang, cang, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-    XYZp = np.dot(RZ, XYZp)
+    nx, ny = mmt.artefact.nballs
+    xindex = nx - 1
+    yindex = nx * (ny - 1)
+    corner_inds = [0, xindex, yindex]
+    mat = matrix_from_3_points(cmm_deform, corner_inds)
+    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, nx * ny))))
+    mmt_deform = mat @ cmm_deform1
 
-    mmt_deform = XYZp[:3, :]
-    return mmt_deform
+    return mmt_deform[:3, :]
 
 
 def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
