@@ -589,9 +589,10 @@ class MainWindow(qtw.QMainWindow):
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
-            state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
-                filter="user"
-            )
+            state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState()
+            # state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
+            #     filter="user"
+            # )
         with open(filename, "wb") as fp:
             pickle.dump(state_dict, fp)
 
