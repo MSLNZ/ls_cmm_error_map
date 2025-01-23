@@ -2,22 +2,17 @@
 
 import datetime as dt
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
-
-
+import pyqtgraph.Qt.QtGui as qtg
+import pyqtgraph.Qt.QtWidgets as qtw
 from pyqtgraph.dockarea.Dock import Dock, DockLabel
 from pyqtgraph.parametertree import Parameter, ParameterTree
-
 from pyqtgraph.Qt.QtCore import Qt as qtc
-import pyqtgraph.Qt.QtWidgets as qtw
-import pyqtgraph.Qt.QtGui as qtg
-
 
 import cmm_error_map.data_cmpts as dc
-
 
 slider_factors = {
     "Txx": 1e-6,
@@ -105,9 +100,27 @@ grp_probe_lengths = {
     "type": "group",
     "expanded": False,
     "children": [
-        {"name": "X", "type": "float", "value": 0.0},
-        {"name": "Y", "type": "float", "value": 0.0},
-        {"name": "Z", "type": "float", "value": 0.0},
+        {
+            "name": "X",
+            "title": "X/mm",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.3f}",
+        },
+        {
+            "name": "Y",
+            "title": "Y/mm",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.3f}",
+        },
+        {
+            "name": "Z",
+            "title": "Z/mm",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.3f}",
+        },
     ],
 }
 
@@ -134,9 +147,27 @@ grp_location = {
     "type": "group",
     "expanded": False,
     "children": [
-        {"name": "X", "type": "float", "value": 0.0},
-        {"name": "Y", "type": "float", "value": 0.0},
-        {"name": "Z", "type": "float", "value": 0.0},
+        {
+            "name": "X",
+            "title": "X/mm",
+            "type": "float",
+            "value": 0.000,
+            "format": "{value:.3f}",
+        },
+        {
+            "name": "Y",
+            "title": "Y/mm",
+            "type": "float",
+            "value": 0.000,
+            "format": "{value:.3f}",
+        },
+        {
+            "name": "Z",
+            "title": "Z/mm",
+            "type": "float",
+            "value": 0.000,
+            "format": "{value:.3f}",
+        },
     ],
 }
 grp_rotation = {
@@ -145,9 +176,27 @@ grp_rotation = {
     "type": "group",
     "expanded": False,
     "children": [
-        {"name": "X", "type": "float", "value": 0.0, "suffix": "°"},
-        {"name": "Y", "type": "float", "value": 0.0, "suffix": "°"},
-        {"name": "Z", "type": "float", "value": 0.0, "suffix": "°"},
+        {
+            "name": "X",
+            "title": "X/°",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.1f}",
+        },
+        {
+            "name": "Y",
+            "title": "Y/°",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.1f}",
+        },
+        {
+            "name": "Z",
+            "title": "Z/°",
+            "type": "float",
+            "value": 0.0,
+            "format": "{value:.1f}",
+        },
     ],
 }
 
@@ -434,7 +483,7 @@ class Plot3dDock(Dock):
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
         self.tree.setStyleSheet(
-            "background:transparent;" "border-width: 0px; border-style: solid"
+            "background:transparent;border-width: 0px; border-style: solid"
         )
         self.tree.setFixedWidth(500)
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
@@ -506,7 +555,6 @@ class Plot3dDock(Dock):
                 # print(f"setting line color to {col}")
                 lines.setData(color=col)
 
-
     def replot(self):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
@@ -551,7 +599,6 @@ def plot2d_plate(
     w.addItem(grid)
     w.addItem(balls)
     w.addItem(lines)
-    
 
     return [balls, lines]
 
@@ -605,7 +652,6 @@ def update_plot1d_bar(
     lines.setData(xy.T)
 
 
-
 class PlotPlateDock(Dock):
     """
     a pyqtgraph Dock containing a plot and a side bar with parameter tree controls
@@ -647,7 +693,7 @@ class PlotPlateDock(Dock):
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
         self.tree.setStyleSheet(
-            "background:transparent;" "border-width: 0px; border-style: solid"
+            "background:transparent;border-width: 0px; border-style: solid"
         )
         self.tree.setFixedWidth(500)
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)
@@ -762,7 +808,7 @@ class PlotBarDock(Dock):
         self.tree = ParameterTree(self.plot_widget, showHeader=False)
         self.tree.setParameters(self.plot_controls, showTop=True)
         self.tree.setStyleSheet(
-            "background:transparent;" "border-width: 0px; border-style: solid"
+            "background:transparent;border-width: 0px; border-style: solid"
         )
         self.tree.setFixedWidth(500)
         self.tree.setHorizontalScrollBarPolicy(qtc.ScrollBarAlwaysOff)

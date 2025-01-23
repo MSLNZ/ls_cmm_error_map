@@ -39,7 +39,6 @@ class MainWindow(qtw.QMainWindow):
         self.plot3d_dock = None
         self.setup_gui()
         self.add_startup_docks()
-        self.add_summary()
 
     def setup_gui(self):
         self.dock_area = DockArea()
@@ -50,13 +49,12 @@ class MainWindow(qtw.QMainWindow):
         self.make_snapshot_controls()
         self.make_machine_controls()
 
-        self.control_group = Parameter.create(type="group", name="main_controls")
+        self.control_group = Parameter.create(type="group", name="Measurement Setup")
 
         self.control_group.addChild(self.machine_group)
         self.control_group.addChild(self.prb_group)
         self.control_group.addChild(self.mmt_group)
         self.control_group.addChild(self.snapshot_group)
-        self.control_group.addChild(self.slider_group)
 
         # other controls
         btn_plot2d = self.control_group.addChild(
@@ -90,10 +88,17 @@ class MainWindow(qtw.QMainWindow):
         self.control_tree.setContentsMargins(0, 0, 0, 0)
         self.control_tree.header().setStretchLastSection(True)
         self.control_tree.header().setMinimumSectionSize(100)
-        self.control_tree.setParameters(self.control_group, showTop=False)
+        self.control_tree.setParameters(self.control_group, showTop=True)
+
+        self.model_tree = ParameterTree(showHeader=False)
+        self.model_tree.setContentsMargins(0, 0, 0, 0)
+        self.model_tree.header().setStretchLastSection(True)
+        self.model_tree.header().setMinimumSectionSize(100)
+        self.model_tree.setParameters(self.slider_group, showTop=True)
+
         v_split = qtw.QSplitter(qtc.Vertical)
         v_split.addWidget(self.control_tree)
-        v_split.addWidget(self.summary)
+        v_split.addWidget(self.model_tree)
         v_split.setSizes([200, 100])
 
         h_split = qtw.QSplitter(qtc.Horizontal)
@@ -652,12 +657,6 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.restoreState(state_dict["dock_area"])
         self.restoring = False
         self.update_machine()
-
-    def add_summary(self):
-        text = "Summary\n"
-        text += "-------\n\n"
-        text += "Use this area for summary or user info"
-        self.summary.setPlainText(text)
 
     def btn_debug(self):
         """
