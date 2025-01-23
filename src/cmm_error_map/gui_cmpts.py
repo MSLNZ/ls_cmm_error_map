@@ -590,6 +590,11 @@ def plot2d_plate(
     ind_lines = np.hstack((indx, indy))
     pos = xy[:2, ind_lines]
     grid.setData(pos.T)
+    # rescale
+    xy_min = 0.0
+    x_max = xy[0, :].max()
+    y_max = xy[1, :].max()
+    w.getPlotItem().setRange(pg.QtCore.QRectF(xy_min, xy_min, x_max, y_max))
 
     # plate
     balls = pg.PlotDataItem(symbolBrush=pg.mkColor(col), size=20, symbol="o", pen=None)
@@ -671,6 +676,7 @@ class PlotPlateDock(Dock):
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
         self.plot_widget.setAspectLocked()
+        self.plot_widget.getPlotItem().disableAutoRange()
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
