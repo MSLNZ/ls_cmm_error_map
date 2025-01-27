@@ -174,6 +174,37 @@ def make_bar_mmts():
     for mmt in mmts.values():
         mmt.artefact = bar
     # add some diagonals
+    x0, y0, z0 = 250.0, 50.0, 50.0
+    # XY plane
+    transform_mat_xy = dc.matrix_from_vectors([x0, y0, z0], [0.0, 45.0, 0.0])
+    xt, yt, zt = 0.0, 0.0, -243.4852
+    prb_xy = dc.Probe(title="P0", name="p0", length=np.array([xt, yt, zt]))
+    mmt_d = dc.Measurement(
+        title="bar diagonal",
+        name="mmt_00",
+        artefact=bar,
+        transform_mat=transform_mat_xy,
+        probe=prb_xy,
+        cmm_nominal=None,
+        cmm_dev=None,
+        mmt_nominal=None,
+        mmt_dev=None,
+    )
+    transform_mat_xy = dc.matrix_from_vectors([x0, y0, z0], [0.0, 45.0, 30.0])
+    mmts["diag XZ"] = mmt_d
+
+    mmt_d = dc.Measurement(
+        title="bar diagonal",
+        name="mmt_00",
+        artefact=bar,
+        transform_mat=transform_mat_xy,
+        probe=prb_xy,
+        cmm_nominal=None,
+        cmm_dev=None,
+        mmt_nominal=None,
+        mmt_dev=None,
+    )
+    mmts["diag XYZ"] = mmt_d
     return mmts
 
 
