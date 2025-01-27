@@ -180,9 +180,8 @@ class Measurement:
         )
         self.cmm_dev = cmm_dev.T
 
-        cmm_deform = self.cmm_nominal + self.cmm_dev
         if ny == 1:
-            mmt_deform = cmm_to_bar_csy(cmm_deform, self.artefact)
+            mmt_deform = cmm_to_bar_csy(self)
         else:
             mmt_deform = cmm_to_plate_csy(self)
 
@@ -259,6 +258,8 @@ def cmm_to_plate_csy(mmt: Measurement):
     origin point ball 0
     z-plane through balls 0, 4, 20
     x-axis through balls 0, 4
+
+    indexes based on mmt.artefact.nballs
     """
     cmm_deform = mmt.cmm_nominal + mmt.cmm_dev
     nx, ny = mmt.artefact.nballs
@@ -272,7 +273,7 @@ def cmm_to_plate_csy(mmt: Measurement):
     return mmt_deform[:3, :]
 
 
-def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
+def cmm_to_bar_csy(mmt: Measurement):
     """
     transform cmm_deform to bar CSY
 
@@ -280,33 +281,21 @@ def cmm_to_bar_csy(cmm_deform: np.ndarray, artefact: ArtefactType):
     x-axis through balls 0, nx-1
     z-plane is through balls 0, nx-1, and ?
     """
-    nx, ny = artefact.nballs
-    xindex = nx - 1
+    cmm_deform = mmt.cmm_nominal + mmt.cmm_dev
     xyz0 = cmm_deform[:, 0]
-    vx = cmm_deform[:, xindex] - xyz0
-    vx = vx / np.linalg.norm(vx)
+    xyz1 = cmm_deform[:, -1]
 
-    # need a 3rd point/dirn not on bar line
-    vy = np.array([0, 1, 0])
-    # check bar not along vy
-    if 1 - np.dot(vx, vy) < 0.001:
-        vy = np.array([1, 0, 0])
-    vz = np.cross(vx, vy)
-    vz = vz / np.linalg.norm(vz)
-
-    mat = np.array(
-        [
-            [vx[0], vy[0], vz[0], xyz0[0]],
-            [vx[1], vy[1], vz[1], xyz0[1]],
-            [vx[2], vy[2], vz[2], xyz0[2]],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-
-    inv_mat = np.linalg.inv(mat)
-
-    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, nx * ny))))
-    mmt_deform = inv_mat @ cmm_deform1
+    # for third point
+    # take  (0, 100, 0) in bar csy and
+    # transform it into cmm csy using mmt.transform_mat
+    bar_c2 = np.array([0, 100, 0, 1])
+    xyz2 = mmt.transform_mat @ bar_c2
+    xyz2 = xyz2[:3]
+    corners = np.vstack((xyz0, xyz1, xyz2)).T
+    corner_inds = [0, 1, 2]
+    mat = matrix_from_3_points(corners, corner_inds)
+    cmm_deform1 = np.vstack((cmm_deform, np.ones((1, cmm_deform.shape[1]))))
+    mmt_deform = mat @ cmm_deform1
 
     return mmt_deform[:3, :]
 

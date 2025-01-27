@@ -347,11 +347,6 @@ class MainWindow(qtw.QMainWindow):
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
 
-        # if self.plot3d_dock:
-        #     print(f"{self.plot3d_dock.pens=}")
-        # else:
-        #     print("no 3d dock yet")
-
         # keep the snapshots
         if self.restoring:
             return
@@ -660,20 +655,7 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-
-        # for mmt_child in self.mmt_group.children():
-        #     print(f"{mmt_child.name()=}, {mmt_child.title()=}")
-        #     print(f"{mmt_child.child('probe').title()=}")
-        #     print(f"{mmt_child.child('probe').name()=}")
-        #     print(f"{mmt_child.child('probe').value()=}")
-        #     print("items in combo box")
-        #     list_item = list(mmt_child.child("probe").items.keys())[0]
-        #     qcb = list_item.widget
-        #     print(f"{qcb.currentText()=}")
-        #     items = [qcb.itemText(i) for i in range(qcb.count())]
-        #     print(items)
-
-        self.update_prb_lists()
+        print("debug button pushed")
 
 
 def main():
