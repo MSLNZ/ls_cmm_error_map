@@ -270,7 +270,7 @@ class MainWindow(qtw.QMainWindow):
         """
         if self.restoring:
             return
-        # print("updating probes")
+
         self.machine.probes = {}
         spacing = self.machine.cmm_model.box_spacing
         size = self.machine.cmm_model.size
@@ -334,10 +334,7 @@ class MainWindow(qtw.QMainWindow):
             }
             new_grp.child("probe").setLimits(prb_limits)
             new_grp.child("probe").setValue(list(prb_limits.values())[0])
-            # print("=======================")
-            # print(f"{prb_limits}")
-            # print(f"{new_grp.child('probe').value()=}")
-            # print("=======================")
+
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
             new_grp.sigContextMenu.connect(self.mmt_menu)
 
@@ -349,16 +346,12 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
-        # print("=======================")
-        # print("in update_measurements")
-        # print(f"{changes=}")
-        # print(f"{info=}")
-        # print(f"{self.pens=}")
+
         # if self.plot3d_dock:
         #     print(f"{self.plot3d_dock.pens=}")
         # else:
         #     print("no 3d dock yet")
-        # print("=======================")
+
         # keep the snapshots
         if self.restoring:
             return
@@ -375,13 +368,8 @@ class MainWindow(qtw.QMainWindow):
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
 
-            # print('=======================')
-            # print(f"{self.machine.probes=}")
-            # print(f'{mmt_child.child("probe").value()=}')
-            # print('=======================')
-
             probe = self.machine.probes[mmt_child.child("probe").value()]
-            # print(f"{type(probe)=}, {probe=}")
+
             mat = dc.matrix_from_vectors(vloc, vrot)
             mmt = dc.Measurement(
                 title=mmt_child.title(),
@@ -399,14 +387,12 @@ class MainWindow(qtw.QMainWindow):
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
-            # print("calling update_pens")
             dock.update_pens(self.pens)
             dock.update_measurement_list()
 
         self.replot()
 
     def save_mmt(self, mmt: dc.Measurement):
-        # print(f"Saving simulation {mmt.name}, artefact {mmt.artefact.title}")
         dialog = gc.SaveSimulationDialog()
         if dialog.exec() == qtw.QDialog.Accepted:
             now = dt.datetime.now().isoformat(sep=" ")
@@ -546,7 +532,7 @@ class MainWindow(qtw.QMainWindow):
         _containers, self.plot_docks = self.dock_area.findAll()
         if name is None:
             name = f"plate{len(self.plot_docks) - 1}"
-        # print(f"{name=}")
+
         new_plot_dock = gc.PlotPlateDock(name, self.machine)
 
         self.dock_area.addDock(new_plot_dock, position="bottom")
@@ -674,7 +660,7 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        # print(f"{self.machine.probes=}")
+
         # for mmt_child in self.mmt_group.children():
         #     print(f"{mmt_child.name()=}, {mmt_child.title()=}")
         #     print(f"{mmt_child.child('probe').title()=}")
@@ -687,7 +673,6 @@ class MainWindow(qtw.QMainWindow):
         #     items = [qcb.itemText(i) for i in range(qcb.count())]
         #     print(items)
 
-        # print("calling update_prb_lists")
         self.update_prb_lists()
 
 
