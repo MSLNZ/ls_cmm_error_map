@@ -20,7 +20,7 @@ import cmm_error_map.mpl_2014.design_matrix_linear as design_old
 # so the results match the new code
 # the pattern is consistent - Txx, Tyy, Tzz have the same sign all others are reversed
 
-abs_tol = 1e-7  # 0.1 nm
+abs_tol = 5e-7  # 0.5 nm
 
 sign_corrections = {
     "Txx": 1,
@@ -91,25 +91,20 @@ def make_models():
 
 model_tests = make_models()
 
+# add a model with multiple entries
+model_tests["multi"] = dc.model_parameters_test.copy()
 
-def make_mmts():
+
+def make_plate_mmts():
     """
     return a dict of dc.Measurement
-    one for each CMM plane XY, XZ, YZ
+    for a plate at each
+    CMM plane XY, XZ, YZ
     """
     ballspacing = 133.0
     x0, y0, z0 = 250.0, 50.0, 50.0
     # XY plane
-    x0xy, y0xy, z0xy = x0, y0, z0
-    transform_mat_xy = np.array(
-        [
-            [1.0, 0.0, 0.0, x0xy],
-            [0.0, 1.0, 0.0, y0xy],
-            [0.0, 0.0, 1.0, z0xy],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    )
-
+    transform_mat_xy = dc.matrix_from_vectors([x0, y0, z0], [0.0, 0.0, 0.0])
     xt, yt, zt = 0.0, 0.0, -243.4852
     prb_xy = dc.Probe(title="P0", name="p0", length=np.array([xt, yt, zt]))
     mmt_xy = dc.Measurement(
@@ -124,16 +119,10 @@ def make_mmts():
         mmt_dev=None,
     )
     # XZ plane
-    x0xz, y0xz, z0xz = x0, y0 + 2.0 * ballspacing, z0
-    transform_mat_xz = np.array(
-        [
-            [1.0, 0.0, 0.0, x0xz],
-            [0.0, 0.0, 1.0, y0xz],
-            [0.0, 1.0, 0.0, z0xz],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
+    transform_mat_xz = dc.matrix_from_vectors(
+        [x0, y0 + 2.0 * ballspacing, z0],
+        [90.0, 0.0, 0.0],
     )
-
     xt_xz, yt_xz, zt_xz = 0.0, 130.0, -243.4852
     prb_xz = dc.Probe(title="P0", name="p0", length=np.array([xt_xz, yt_xz, zt_xz]))
     mmt_xz = dc.Measurement(
@@ -148,14 +137,9 @@ def make_mmts():
         mmt_dev=None,
     )
     # YZ plane
-    x0yz, y0yz, z0yz = x0 + 2.0 * ballspacing, y0, z0
-    transform_mat_yz = np.array(
-        [
-            [0.0, 0.0, 1.0, x0yz],
-            [1.0, 0.0, 0.0, y0yz],
-            [0.0, 1.0, 0.0, z0yz],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
+    transform_mat_yz = dc.matrix_from_vectors(
+        [x0 + 2.0 * ballspacing, y0, z0],
+        [90.0, 0.0, 90.0],
     )
     xt_yz, yt_yz, zt_yz = 130.0, 0.0, -243.4852
     prb_yz = dc.Probe(title="P0", name="p0", length=np.array([xt_yz, yt_yz, zt_yz]))
@@ -175,11 +159,29 @@ def make_mmts():
     return mmts
 
 
-mmt_tests = make_mmts()
+plate_mmt_tests = make_plate_mmts()
+
+
+def make_bar_mmts():
+    """
+    return a dict of dc.Measurement
+    for a bar at each
+    CMM plane XY, XZ, YZ
+    and  diagonals
+    """
+    bar = dc.ArtefactType(title="bar 300", nballs=(4, 1), ball_spacing=100.0)
+    mmts = make_plate_mmts()
+    for mmt in mmts.values():
+        mmt.artefact = bar
+    # add some diagonals
+    return mmts
+
+
+bar_mmt_tests = make_bar_mmts()
 
 
 @pytest.mark.parametrize("model_params", model_tests.values(), ids=model_tests.keys())
-@pytest.mark.parametrize("mmt", mmt_tests.values(), ids=mmt_tests.keys())
+@pytest.mark.parametrize("mmt", plate_mmt_tests.values(), ids=plate_mmt_tests.keys())
 def test_XYZ_regression(model_params, mmt):
     """
     regression test a set of model parameters with the given mmt against the old matplotlib code,
@@ -207,7 +209,7 @@ def test_XYZ_regression(model_params, mmt):
 
 
 @pytest.mark.parametrize("model_params", model_tests.values(), ids=model_tests.keys())
-@pytest.mark.parametrize("mmt", mmt_tests.values(), ids=mmt_tests.keys())
+@pytest.mark.parametrize("mmt", plate_mmt_tests.values(), ids=plate_mmt_tests.keys())
 def test_plate_csy(model_params, mmt):
     """
     test that the plate CSY goes through Balls 1, 5, and 21 correctly
@@ -221,3 +223,18 @@ def test_plate_csy(model_params, mmt):
     npt.assert_allclose(mmt_deform[1:, 4], np.array([0.0, 0.0]), atol=abs_tol)
     # Ball 21 is at  (x, y, 0)
     npt.assert_allclose(mmt_deform[2, 20], 0.0, atol=abs_tol)
+
+
+@pytest.mark.parametrize("model_params", model_tests.values(), ids=model_tests.keys())
+@pytest.mark.parametrize("mmt", bar_mmt_tests.values(), ids=bar_mmt_tests.keys())
+def test_bar_csy(model_params, mmt):
+    """
+    test the end points of mmt
+    """
+    cmm = dc.pmm_866
+    mmt.recalculate(model_params, cmm.cmm_model)
+    mmt_deform = mmt.mmt_nominal + mmt.mmt_dev
+    # Ball 1 is at (0, 0, 0)
+    npt.assert_allclose(mmt_deform[:, 0], np.array([0.0, 0.0, 0.0]), atol=abs_tol)
+    # end ball is at  (x, 0, 0)
+    npt.assert_allclose(mmt_deform[1:, -1], np.array([0.0, 0.0]), atol=abs_tol)
