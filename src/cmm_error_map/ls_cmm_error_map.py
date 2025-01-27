@@ -270,6 +270,7 @@ class MainWindow(qtw.QMainWindow):
         """
         if self.restoring:
             return
+        # print("updating probes")
         self.machine.probes = {}
         spacing = self.machine.cmm_model.box_spacing
         size = self.machine.cmm_model.size
@@ -333,6 +334,10 @@ class MainWindow(qtw.QMainWindow):
             }
             new_grp.child("probe").setLimits(prb_limits)
             new_grp.child("probe").setValue(list(prb_limits.values())[0])
+            # print("=======================")
+            # print(f"{prb_limits}")
+            # print(f"{new_grp.child('probe').value()=}")
+            # print("=======================")
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
             new_grp.sigContextMenu.connect(self.mmt_menu)
 
@@ -344,7 +349,7 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
-        # print('=======================')
+        # print("=======================")
         # print("in update_measurements")
         # print(f"{changes=}")
         # print(f"{info=}")
@@ -352,8 +357,8 @@ class MainWindow(qtw.QMainWindow):
         # if self.plot3d_dock:
         #     print(f"{self.plot3d_dock.pens=}")
         # else:
-        #     print('no 3d dock yet')
-        # print('=======================')
+        #     print("no 3d dock yet")
+        # print("=======================")
         # keep the snapshots
         if self.restoring:
             return
@@ -376,6 +381,7 @@ class MainWindow(qtw.QMainWindow):
             # print('=======================')
 
             probe = self.machine.probes[mmt_child.child("probe").value()]
+            # print(f"{type(probe)=}, {probe=}")
             mat = dc.matrix_from_vectors(vloc, vrot)
             mmt = dc.Measurement(
                 title=mmt_child.title(),
@@ -497,17 +503,21 @@ class MainWindow(qtw.QMainWindow):
             self.update_measurements()
             # update probe titles in measurement lists
             for mmt_child in self.mmt_group.children():
+                prb_p = mmt_child.child("probe")
+                prb_v = prb_p.value()
                 prb_limits = {
                     value.title: key for key, value in self.machine.probes.items()
                 }
                 mmt_child.child("probe").setLimits(prb_limits)
+                # do emit rather than setValue as this makes sure lists update.
+                prb_p.sigValueChanged.emit(prb_p, prb_v)
+
             # update probe titles in 3d dock list
             if len(self.mmt_group.children()) > 0:
-                # print('=========================')
-                # print(f"{prb_limits=}")
-                # print('=========================')
-                self.plot3d_dock.probe_box.setLimits(prb_limits)
-
+                prb_p = self.plot3d_dock.probe_box
+                prb_v = prb_p.value()
+                prb_p.setLimits(prb_limits)
+                prb_p.sigValueChanged.emit(prb_p, prb_v)
         except AttributeError:
             # no mmt group yet
             pass
@@ -583,7 +593,8 @@ class MainWindow(qtw.QMainWindow):
         if Path(filename).suffix == "":
             filename = filename + ".pkl"
         state_dict = {}
-        state_dict["main_state"] = self.control_group.saveState(filter="user")
+        # state_dict["main_state"] = self.control_group.saveState(filter="user")
+        state_dict["main_state"] = self.control_group.saveState()
         state_dict["counts"] = {
             "probes": len(self.prb_group.children()),
             "simulations": len(self.mmt_group.children()),
@@ -663,23 +674,21 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        import cmm_error_map.mpl_2014.design_matrix_linear as design_old
+        # print(f"{self.machine.probes=}")
+        # for mmt_child in self.mmt_group.children():
+        #     print(f"{mmt_child.name()=}, {mmt_child.title()=}")
+        #     print(f"{mmt_child.child('probe').title()=}")
+        #     print(f"{mmt_child.child('probe').name()=}")
+        #     print(f"{mmt_child.child('probe').value()=}")
+        #     print("items in combo box")
+        #     list_item = list(mmt_child.child("probe").items.keys())[0]
+        #     qcb = list_item.widget
+        #     print(f"{qcb.currentText()=}")
+        #     items = [qcb.itemText(i) for i in range(qcb.count())]
+        #     print(items)
 
-        with open("/home/elfnor/gits/ls_cmm_error_map/notebooks/mmts.pkl", "wb") as fp:
-            pickle.dump(self.machine.measurements, fp)
-        print("======================")
-        print(self.machine.model_params)
-        params = list(self.machine.model_params.values())
-        for mmt in self.machine.measurements.values():
-            print("======================")
-            print(f"mmt {mmt.title}, {mmt.name}")
-            print("ball 25")
-            print(f"new {mmt.mmt_dev[:, -1]=}")
-            xt, yt, zt = mmt.probe.length
-            dxy = design_old.modelled_mmts_XYZ(mmt.transform_mat, xt, yt, zt, params)
-            print(f"old {dxy[-1, :]=}")
-            print(f"{mmt.transform_mat}")
-            print("======================")
+        # print("calling update_prb_lists")
+        self.update_prb_lists()
 
 
 def main():
