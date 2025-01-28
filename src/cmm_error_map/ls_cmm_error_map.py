@@ -122,6 +122,7 @@ class MainWindow(qtw.QMainWindow):
         best done after gui created
         """
         self.control_tree.setStyleSheet(gc.tree_style)
+        self.model_tree.setStyleSheet(gc.tree_style)
         for grp in [self.prb_group, self.mmt_group, self.snapshot_group]:
             add_btn = list(grp.items.keys())[0].addWidget
             add_btn.setStyleSheet(gc.add_btn_style)
@@ -384,8 +385,19 @@ class MainWindow(qtw.QMainWindow):
         for dock in self.plot_docks.values():
             dock.update_pens(self.pens)
             dock.update_measurement_list()
+        self.set_mmt_colors()
 
         self.replot()
+
+    def set_mmt_colors(self):
+        for mmt_child in self.mmt_group.children():
+            mmt_name = mmt_child.name()
+            pen = self.pens[mmt_name]
+            try:
+                pitem = list(mmt_child.items.keys())[0]
+            except IndexError:
+                return
+            pitem.setForeground(0, pen.color())
 
     def save_mmt(self, mmt: dc.Measurement):
         dialog = gc.SaveSimulationDialog()
@@ -656,24 +668,15 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print("debug button pushed")
+        self.set_mmt_colors()
 
 
 def main():
     _app = pg.mkQApp("CMM Error Map App")
 
-    qdarktheme.setup_theme(
-        "dark",
-        custom_colors={
-            "primary": "#f07845",
-            "list.alternateBackground": "#202124",
-            "primary>button.hoverBackground": "#42444a",
-        },
-        corner_shape="sharp",
-    )
+    qdarktheme.setup_theme(**gc.main_theme)
 
     w = MainWindow()
-    # app.setStyleSheet("QCheckBox { padding: 5px }")
-    # _app.setStyleSheet("QPushButton { background: red }")
     w.showMaximized()
     w.show()
 

@@ -14,6 +14,29 @@ from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.data_cmpts as dc
 
+# =========== THEME===============
+# qdarktheme setup parameters
+# https://pyqtdarktheme.readthedocs.io/en/stable/reference/qdarktheme.html
+main_theme = dict(
+    theme="dark",
+    custom_colors={
+        "primary": "#f07845",
+        "list.alternateBackground": "#202124",
+        "primary>button.hoverBackground": "#42444a",
+    },
+    corner_shape="sharp",
+)
+
+# css for individual widgets
+tree_style = """
+            ParameterControlledButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
+            ParameterControlledButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
+            """
+add_btn_style = """
+            QPushButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
+            QPushButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
+            """
+
 slider_factors = {
     "Txx": 1e-6,
     "Txy": 1e-6,
@@ -287,15 +310,6 @@ dock1d_control_grp = {
         },
     ],
 }
-
-tree_style = """
-            ParameterControlledButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
-            ParameterControlledButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
-            """
-add_btn_style = """
-            QPushButton { background: #f07845; color: white;padding: 5px 10px 5px 10px;font-weight: bold;}
-            QPushButton:hover { background: #42444a; border: 1px solid #f07845; padding:4px}
-            """
 
 
 def all_descendants(root, kids=None):
