@@ -339,6 +339,10 @@ class MainWindow(qtw.QMainWindow):
             new_grp.child("mmt_title").sigValueChanged.connect(self.change_mmt_title)
             new_grp.sigContextMenu.connect(self.mmt_menu)
 
+            new_grp.child("grp_location", "centre").sigActivated.connect(
+                self.centre_on_cmm
+            )
+
         self.update_measurements()
         self.nmmts += 1
 
@@ -360,7 +364,7 @@ class MainWindow(qtw.QMainWindow):
             artefact = cf.artefact_models[mmt_child.child("artefact").value()]
 
             grp_loc = mmt_child.child("grp_location")
-            vloc = [grand_kid.value() for grand_kid in grp_loc]
+            vloc = [grand_kid.value() for grand_kid in grp_loc][:-1]
             grp_rot = mmt_child.child("grp_rotation")
             vrot = [grand_kid.value() for grand_kid in grp_rot]
 
@@ -398,6 +402,23 @@ class MainWindow(qtw.QMainWindow):
             except IndexError:
                 return
             pitem.setForeground(0, pen.color())
+
+    def centre_on_cmm(self, item):
+        self.update_measurements()
+        mmt_name = item.parent().parent().name()
+        mmt = self.machine.measurements[mmt_name]
+        grp_loc = self.mmt_group.child(mmt_name, "grp_location")
+        old_vloc = [grand_kid.value() for grand_kid in grp_loc][:-1]
+        cmm_centre = np.array(self.machine.cmm_model.size) / 2.0
+
+        mmt_centre = (
+            (np.array(mmt.artefact.nballs) - 1) * mmt.artefact.ball_spacing / 2.0
+        )
+        mmt_centre = np.append(mmt_centre, [0.0, 1.0]).T
+        mmt_centre = mmt.transform_mat @ mmt_centre
+        new_vloc = list(cmm_centre - mmt_centre[:-1] + old_vloc) + [0.0]
+
+        [kid.setValue(x) for x, kid in zip(new_vloc, grp_loc)]
 
     def save_mmt(self, mmt: dc.Measurement):
         dialog = gc.SaveSimulationDialog()
@@ -668,7 +689,18 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print("debug button pushed")
-        self.set_mmt_colors()
+        for mmt_name in self.machine.measurements:
+            mmt = self.machine.measurements[mmt_name]
+            mmt_max = mmt.cmm_nominal.max(axis=1)
+            mmt_min = mmt.cmm_nominal.min(axis=1)
+            mmt_centre = (mmt_max) / 2.0
+            cmm_centre = np.array(self.machine.cmm_model.size) / 2.0
+            loc = list(cmm_centre - mmt_centre) + [0.0]
+            print(f"{mmt_max=}")
+            print(f"{mmt_min=}")
+            print(f"{mmt_centre=}")
+            print(f"{cmm_centre=}")
+            print(f"{loc=}")
 
 
 def main():

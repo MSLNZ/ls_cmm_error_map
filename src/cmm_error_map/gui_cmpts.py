@@ -191,6 +191,12 @@ grp_location = {
             "value": 0.000,
             "format": "{value:.3f}",
         },
+        {
+            "name": "centre",
+            "title": "Centre on CMM",
+            "type": "action",
+            "value": 0,
+        },
     ],
 }
 grp_rotation = {
@@ -247,8 +253,8 @@ mmt_control_grp = {
             "type": "list",
             "limits": [],
         },
-        grp_location,
         grp_rotation,
+        grp_location,
         {
             "name": "pen",
             "title": "Colour",
