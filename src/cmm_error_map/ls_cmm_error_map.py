@@ -34,7 +34,7 @@ class MainWindow(qtw.QMainWindow):
         self.nprbs = 0
         self.nmmts = 0
         self.pens = {}
-        self.restoring = False
+        self.freeze_gui = False
         self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
@@ -139,7 +139,7 @@ class MainWindow(qtw.QMainWindow):
         self.machine_group.sigTreeStateChanged.connect(self.update_machine)
 
     def update_machine(self):
-        if self.restoring:
+        if self.freeze_gui:
             return
         self.machine = dc.Machine(
             cmm_model=self.cmm_models[self.machine_group.value()],
@@ -206,7 +206,7 @@ class MainWindow(qtw.QMainWindow):
         """
         event callback for sliders
         """
-        if self.restoring:
+        if self.freeze_gui:
             return
         control_name = changes[0][0].name()
         slider_value = changes[0][2]
@@ -261,15 +261,17 @@ class MainWindow(qtw.QMainWindow):
 
     def delete_group(self, grp, change):
         if change == "Delete":
+            self.freeze_gui = True
             grp.remove()
             self.update_prb_lists()
+            self.freeze_gui = False
             self.update_measurements()
 
     def update_probes(self):
         """
         recreates self.machine.probes from gui controls in self.probes_group
         """
-        if self.restoring:
+        if self.freeze_gui:
             return
 
         self.machine.probes = {}
@@ -353,7 +355,7 @@ class MainWindow(qtw.QMainWindow):
         """
 
         # keep the snapshots
-        if self.restoring:
+        if self.freeze_gui:
             return
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
@@ -511,7 +513,7 @@ class MainWindow(qtw.QMainWindow):
         self.update_prb_lists()
 
     def update_prb_lists(self):
-        if self.restoring:
+        if self.freeze_gui:
             return
         try:
             self.update_measurements()
@@ -627,7 +629,7 @@ class MainWindow(qtw.QMainWindow):
             pickle.dump(state_dict, fp)
 
     def restore_state(self):
-        self.restoring = True
+        self.freeze_gui = True
         filename, _ = qtw.QFileDialog.getOpenFileName(
             self, filter="config files (*.pkl)"
         )
@@ -680,7 +682,7 @@ class MainWindow(qtw.QMainWindow):
                 raise ValueError("Unknown dock type")
 
         self.dock_area.restoreState(state_dict["dock_area"])
-        self.restoring = False
+        self.freeze_gui = False
         self.update_machine()
 
     def btn_debug(self):

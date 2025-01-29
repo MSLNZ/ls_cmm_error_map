@@ -518,6 +518,19 @@ class Plot3dDock(Dock):
         plots an outline of the selected measurements in this 3d plot
         plot_data_2d.transform3d
         """
+        # check for deletions from machine.measurements
+        # need two steps as can't delete dict item during iteration
+        to_delete = []
+        for mmt_name in self.plot_data:
+            if mmt_name not in self.machine.measurements:
+                to_delete.append(mmt_name)
+
+        for mmt_name in to_delete:
+            # remove plotlines
+            for plot in self.plot_data[mmt_name]:
+                self.plot_widget.removeItem(plot)
+            del self.plot_data[mmt_name]
+
         for mmt_name, mmt in self.machine.measurements.items():
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
