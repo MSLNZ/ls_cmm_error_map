@@ -532,6 +532,9 @@ class Plot3dDock(Dock):
             del self.plot_data[mmt_name]
 
         for mmt_name, mmt in self.machine.measurements.items():
+            if mmt.cmm_nominal is None:
+                # measurement has not been recalculated yet
+                continue
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
                 # remove plotlines
@@ -780,8 +783,23 @@ class PlotPlateDock(Dock):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
+        # check for deletions from machine.measurements
+        # need two steps as can't delete dict item during iteration
+        to_delete = []
+        for mmt_name in self.plot_data:
+            if mmt_name not in self.machine.measurements:
+                to_delete.append(mmt_name)
+
+        for mmt_name in to_delete:
+            # remove plotlines
+            for plot in self.plot_data[mmt_name]:
+                self.plot_widget.removeItem(plot)
+            del self.plot_data[mmt_name]
 
         for mmt_name, mmt in self.machine.measurements.items():
+            if mmt.cmm_nominal is None:
+                # measurement has not been recalculated yet
+                continue
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
                 # remove plotlines
@@ -872,8 +890,24 @@ class PlotBarDock(Dock):
         """
         redraw existing plots and add new ones from data in self.machine.measurements
         """
+        # check for deletions from machine.measurements
+        # need two steps as can't delete dict item during iteration
+        to_delete = []
+        for mmt_name in self.plot_data:
+            if mmt_name not in self.machine.measurements:
+                to_delete.append(mmt_name)
+
+        for mmt_name in to_delete:
+            # remove plotlines
+            for plot in self.plot_data[mmt_name]:
+                self.plot_widget.removeItem(plot)
+            del self.plot_data[mmt_name]
 
         for mmt_name, mmt in self.machine.measurements.items():
+            if mmt.cmm_nominal is None:
+                # measurement has not been recalculated yet
+                continue
+
             to_plot = mmt.title in self.mmts_to_plot.value()
             if not to_plot and mmt_name in self.plot_data:
                 # remove plotlines

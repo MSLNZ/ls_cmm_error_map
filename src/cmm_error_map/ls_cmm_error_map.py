@@ -253,7 +253,6 @@ class MainWindow(qtw.QMainWindow):
 
     def mmt_menu(self, grp, change):
         if change == "Delete":
-            self.machine.measurements.pop(grp.name())
             self.delete_group(grp, change)
         elif change == "Save to CSV":
             mmt = self.machine.measurements[grp.name()]
@@ -261,10 +260,10 @@ class MainWindow(qtw.QMainWindow):
 
     def delete_group(self, grp, change):
         if change == "Delete":
-            self.freeze_gui = True
+            self.machine.measurements.pop(grp.name())
+            self.recalculate()
             grp.remove()
             self.update_prb_lists()
-            self.freeze_gui = False
             self.update_measurements()
 
     def update_probes(self):
@@ -691,18 +690,13 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print("debug button pushed")
-        for mmt_name in self.machine.measurements:
-            mmt = self.machine.measurements[mmt_name]
-            mmt_max = mmt.cmm_nominal.max(axis=1)
-            mmt_min = mmt.cmm_nominal.min(axis=1)
-            mmt_centre = (mmt_max) / 2.0
-            cmm_centre = np.array(self.machine.cmm_model.size) / 2.0
-            loc = list(cmm_centre - mmt_centre) + [0.0]
-            print(f"{mmt_max=}")
-            print(f"{mmt_min=}")
-            print(f"{mmt_centre=}")
-            print(f"{cmm_centre=}")
-            print(f"{loc=}")
+        # debug
+        for mmt in self.machine.measurements.values():
+            if mmt.cmm_dev is None:
+                print(f"{mmt.name} has cmm_nominal None")
+            else:
+                print(f"{mmt.name} has cmm_nominal {mmt.cmm_dev.shape=}")
+        # end debug
 
 
 def main():
