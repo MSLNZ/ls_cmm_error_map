@@ -61,15 +61,11 @@ def model_matrix(
     model_params: dict[str, float | list[float]],
     fixed_table=False,
     bridge_axis=1,
-):
-    """ """
-    # create polys from params
-    coeffs = {
-        key: value if isinstance(value, list) else [0.0, value]
-        for key, value in model_params.items()
-    }
-    model_polys = {key: Polynomial(coeffs[key]) for key in model_params}
-
+) -> np.ndarray:  # (3, n)
+    """
+    return the cmm deviation at the nominal points in xyz_in
+    for probe lengths xyzt for the model in model_params
+    """
     if not fixed_table:
         # table movement is in opposite direction to probe position for a moving table
         dirn = [1, 1, 1]
@@ -79,37 +75,12 @@ def model_matrix(
     else:
         xyz = xyz_in
 
-    x, y, z = xyz
-    dep_dict = {
-        "Txx": x,
-        "Txy": x,
-        "Txz": x,
-        "Tyx": y,
-        "Tyy": y,
-        "Tyz": y,
-        "Tzx": z,
-        "Tzy": z,
-        "Tzz": z,
-        "Rxx": x,
-        "Rxy": x,
-        "Rxz": x,
-        "Ryx": y,
-        "Ryy": y,
-        "Ryz": y,
-        "Rzx": z,
-        "Rzy": z,
-        "Rzz": z,
-        "Wxy": x,
-        "Wxz": y,
-        "Wyz": z,
-    }
-    poly_evals = {}
-    for key in dep_dict:
-        poly_evals[key] = model_polys[key](dep_dict[key])
-    pl = poly_evals
-    # poly_evals = {key: model_polys[key](dep_dict[key]) for key in dep_dict}
+    # this is slow keep outside loop
+    pl = evaluate_polynomials(xyz, model_params)
+
     dev_out = np.empty_like(xyz_in)
     for i in range(xyz_in.shape[1]):
+        # could parameterise loop but its fast enough for now
         rxl = np.array(
             [
                 [1.0, pl["Rxz"][i], -pl["Rxy"][i]],
