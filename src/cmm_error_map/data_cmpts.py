@@ -28,7 +28,7 @@ from pathlib import Path
 import numpy as np
 import scipy.spatial.transform as st
 
-import cmm_error_map.design_linear as design
+import cmm_error_map.design_poly as design
 
 model_parameters_dict = {
     "Txx": 0.0,
@@ -127,7 +127,7 @@ class BoxGrid:
         z = (pnts_range // nx // ny) * sz
         self.grid_nominal = np.stack((x, y, z))
 
-        dev3d = design.linear_model_matrix(
+        dev3d = design.model_matrix(
             self.grid_nominal.T,
             self.probe.length,
             model_params,
@@ -171,7 +171,7 @@ class Measurement:
         self.cmm_nominal = cmm_nominal1[:3, :]
 
         # deformed position of plate relative to nominal - in CMM CSY
-        cmm_dev = design.linear_model_matrix(
+        cmm_dev = design.model_matrix(
             self.cmm_nominal.T,
             self.probe.length,
             model_params,

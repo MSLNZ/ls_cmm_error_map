@@ -1,20 +1,27 @@
 """
-design_linear.py
-2024-10-02
+design_poly.py
+2054-02-03
 
 solve the direct equations in matrix format
 only simplification is angle approximation in matrices
+allow the input to be a `numpy.Polynomial` object
 """
 
 import numpy as np
+from numpy.polynomial import Polynomial
 
 
-def linear_dependency(
+def poly_dependency(
     xyz: np.ndarray,
-    model_params: dict[str, float],
-) -> dict[str, float]:
+    model_params: dict[str, float | list[float]],
+) -> dict[str, list[float]]:
     """
-    return the parameter * axis position value for the  axis the parameter is dependent on
+    if model params[key] is a single value return a linear dependent
+    create a polynomial 0.0 * value * xyz[dependent_axis], that is
+    parameter * axis position value for the  axis the parameter is dependent on
+    if model params[key] is a list of values
+    calculate a polynomial form these coeficients and return
+    the polnominal evaluated at the axis value for the dependent axis
     """
     x, y, z = xyz
     ld_dict = {
@@ -40,11 +47,22 @@ def linear_dependency(
         "Wxz": y,
         "Wyz": z,
     }
-    pl = {key: model_params[key] * ld_dict[key] for key in model_params}
+    # pl = {}
+    # for key, value in model_params.items():
+    #     if isinstance(value, list):
+    #         poly = Polynomial(value)
+    #     else:
+    #         poly = Polynomial([0.0, value])
+    #     pl[key] = poly(ld_dict[key])
+    coeffs = {
+        key: value if isinstance(value, list) else [0.0, value]
+        for key, value in model_params.items()
+    }
+    pl = {key: Polynomial(coeffs[key])(ld_dict[key]) for key in model_params}
     return pl
 
 
-def linear_model_matrix(
+def model_matrix(
     xyz3d: np.ndarray,  # (n, 3)
     xyzt: np.ndarray,  # (3,)
     model_params: dict[str, float],
@@ -52,7 +70,7 @@ def linear_model_matrix(
     bridge_axis=1,
 ):
     dev3d = np.apply_along_axis(
-        func1d=linear_model_point,
+        func1d=model_point,
         axis=1,
         arr=xyz3d,
         xyzt=xyzt,
@@ -63,10 +81,10 @@ def linear_model_matrix(
     return dev3d
 
 
-def linear_model_point(
+def model_point(
     xyz_in: np.ndarray,  # (3,)
     xyzt: np.ndarray,  # (3,)
-    model_params: dict[str, float],
+    model_params: dict[str, list[float]],
     fixed_table=False,
     bridge_axis=1,
 ):
@@ -80,7 +98,7 @@ def linear_model_point(
     else:
         xyz = xyz_in
 
-    pl = linear_dependency(xyz, model_params)
+    pl = poly_dependency(xyz, model_params)
     # rotation
     # small angle approximations used
     rxl = np.array(
