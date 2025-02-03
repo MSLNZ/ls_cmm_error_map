@@ -128,13 +128,13 @@ class BoxGrid:
         self.grid_nominal = np.stack((x, y, z))
 
         dev3d = design.model_matrix(
-            self.grid_nominal.T,
+            self.grid_nominal,
             self.probe.length,
             model_params,
             cmm_model.fixed_table,
             cmm_model.bridge_axis,
         )
-        self.grid_dev = dev3d.T
+        self.grid_dev = dev3d
 
 
 @dataclass
@@ -172,13 +172,13 @@ class Measurement:
 
         # deformed position of plate relative to nominal - in CMM CSY
         cmm_dev = design.model_matrix(
-            self.cmm_nominal.T,
+            self.cmm_nominal,
             self.probe.length,
             model_params,
             cmm_model.fixed_table,
             cmm_model.bridge_axis,
         )
-        self.cmm_dev = cmm_dev.T
+        self.cmm_dev = cmm_dev
 
         if ny == 1:
             mmt_deform = cmm_to_bar_csy(self)

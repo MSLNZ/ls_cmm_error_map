@@ -11,20 +11,16 @@ import numpy as np
 from numpy.polynomial import Polynomial
 
 
-def poly_dependency(
-    xyz: np.ndarray,
-    model_params: dict[str, float | list[float]],
-) -> dict[str, list[float]]:
+def evaluate_polynomials(
+    xyz: np.ndarray,  # (3, n)
+    model_params: float | list[float],
+):
     """
-    if model params[key] is a single value return a linear dependent
-    create a polynomial 0.0 * value * xyz[dependent_axis], that is
-    parameter * axis position value for the  axis the parameter is dependent on
-    if model params[key] is a list of values
-    calculate a polynomial form these coeficients and return
-    the polnominal evaluated at the axis value for the dependent axis
+    create a polynomial for each parameter in model_params
+    and evaluate that polynomoal at each point in xyz
     """
     x, y, z = xyz
-    ld_dict = {
+    dep_dict = {
         "Txx": x,
         "Txy": x,
         "Txz": x,
@@ -47,127 +43,141 @@ def poly_dependency(
         "Wxz": y,
         "Wyz": z,
     }
-    # pl = {}
-    # for key, value in model_params.items():
-    #     if isinstance(value, list):
-    #         poly = Polynomial(value)
-    #     else:
-    #         poly = Polynomial([0.0, value])
-    #     pl[key] = poly(ld_dict[key])
+    # create polys from params
     coeffs = {
         key: value if isinstance(value, list) else [0.0, value]
         for key, value in model_params.items()
     }
-    pl = {key: Polynomial(coeffs[key])(ld_dict[key]) for key in model_params}
-    return pl
+    model_polys = {key: Polynomial(coeffs[key]) for key in model_params}
+    poly_evals = {}
+    for key in dep_dict:
+        poly_evals[key] = model_polys[key](dep_dict[key])
+    return poly_evals
 
 
 def model_matrix(
-    xyz3d: np.ndarray,  # (n, 3)
+    xyz_in: np.ndarray,  # (3, n)
     xyzt: np.ndarray,  # (3,)
-    model_params: dict[str, float],
-    fixed_table=False,
-    bridge_axis=1,
-):
-    dev3d = np.apply_along_axis(
-        func1d=model_point,
-        axis=1,
-        arr=xyz3d,
-        xyzt=xyzt,
-        model_params=model_params,
-        fixed_table=fixed_table,
-        bridge_axis=bridge_axis,
-    )
-    return dev3d
-
-
-def model_point(
-    xyz_in: np.ndarray,  # (3,)
-    xyzt: np.ndarray,  # (3,)
-    model_params: dict[str, list[float]],
+    model_params: dict[str, float | list[float]],
     fixed_table=False,
     bridge_axis=1,
 ):
     """ """
+    # create polys from params
+    coeffs = {
+        key: value if isinstance(value, list) else [0.0, value]
+        for key, value in model_params.items()
+    }
+    model_polys = {key: Polynomial(coeffs[key]) for key in model_params}
+
     if not fixed_table:
         # table movement is in opposite direction to probe position for a moving table
         dirn = [1, 1, 1]
         table_axis = int(not bridge_axis)
         dirn[table_axis] = -1
-        xyz = xyz_in * dirn
+        xyz = (xyz_in.T * dirn).T
     else:
         xyz = xyz_in
 
-    pl = poly_dependency(xyz, model_params)
-    # rotation
-    # small angle approximations used
-    rxl = np.array(
-        [
-            [1.0, pl["Rxz"], -pl["Rxy"]],
-            [-pl["Rxz"], 1.0, pl["Rxx"]],
-            [pl["Rxy"], -pl["Rxx"], 1.0],
-        ]
-    )
-    ryl = np.array(
-        [
-            [1.0, pl["Ryz"], -pl["Ryy"]],
-            [-pl["Ryz"], 1.0, pl["Ryx"]],
-            [pl["Ryy"], -pl["Ryx"], 1.0],
-        ]
-    )
-    rzl = np.array(
-        [
-            [1.0, pl["Rzz"], -pl["Rzy"]],
-            [-pl["Rzz"], 1.0, pl["Rzx"]],
-            [pl["Rzy"], -pl["Rzx"], 1.0],
-        ]
-    )
-    # inverse rotation
-    inv_rxl = np.linalg.inv(rxl)
-    inv_ryl = np.linalg.inv(ryl)
-    inv_rzl = np.linalg.inv(rzl)
-    # translation
     x, y, z = xyz
-    xl = np.array([x + pl["Txx"], pl["Txy"], pl["Txz"]])
-    yl = np.array([pl["Tyx"], y + pl["Tyy"], pl["Tyz"]])
-    zl = np.array([pl["Tzx"], pl["Tzy"], z + pl["Tzz"]])
-    # @ is matrix multiplication, fmt:skip keeps formatting when using ruff
-    if fixed_table and bridge_axis == 0:
-        # moving bridge, x axis across bridge - eg Hexagon ... (Bruce)
-        w = (
-            + yl
-            + inv_ryl @ xl
-            + inv_ryl @ inv_rxl @ zl
-            + inv_ryl @ inv_rxl @ inv_rzl @ xyzt
-        )  # fmt: skip
+    dep_dict = {
+        "Txx": x,
+        "Txy": x,
+        "Txz": x,
+        "Tyx": y,
+        "Tyy": y,
+        "Tyz": y,
+        "Tzx": z,
+        "Tzy": z,
+        "Tzz": z,
+        "Rxx": x,
+        "Rxy": x,
+        "Rxz": x,
+        "Ryx": y,
+        "Ryy": y,
+        "Ryz": y,
+        "Rzx": z,
+        "Rzy": z,
+        "Rzz": z,
+        "Wxy": x,
+        "Wxz": y,
+        "Wyz": z,
+    }
+    poly_evals = {}
+    for key in dep_dict:
+        poly_evals[key] = model_polys[key](dep_dict[key])
+    pl = poly_evals
+    # poly_evals = {key: model_polys[key](dep_dict[key]) for key in dep_dict}
+    dev_out = np.empty_like(xyz_in)
+    for i in range(xyz_in.shape[1]):
+        rxl = np.array(
+            [
+                [1.0, pl["Rxz"][i], -pl["Rxy"][i]],
+                [-pl["Rxz"][i], 1.0, pl["Rxx"][i]],
+                [pl["Rxy"][i], -pl["Rxx"][i], 1.0],
+            ]
+        )
+        ryl = np.array(
+            [
+                [1.0, pl["Ryz"][i], -pl["Ryy"][i]],
+                [-pl["Ryz"][i], 1.0, pl["Ryx"][i]],
+                [pl["Ryy"][i], -pl["Ryx"][i], 1.0],
+            ]
+        )
+        rzl = np.array(
+            [
+                [1.0, pl["Rzz"][i], -pl["Rzy"][i]],
+                [-pl["Rzz"][i], 1.0, pl["Rzx"][i]],
+                [pl["Rzy"][i], -pl["Rzx"][i], 1.0],
+            ]
+        )
+        # inverse of a rotation matrix is its transpose
+        inv_rxl = rxl.T
+        inv_ryl = ryl.T
+        inv_rzl = rzl.T
+        # translation
+        x, y, z = xyz[:, i]
+        xl = np.array([x + pl["Txx"][i], pl["Txy"][i], pl["Txz"][i]])
+        yl = np.array([pl["Tyx"][i], y + pl["Tyy"][i], pl["Tyz"][i]])
+        zl = np.array([pl["Tzx"][i], pl["Tzy"][i], z + pl["Tzz"][i]])
+        # @ is matrix multiplication, fmt:skip keeps formatting when using ruff
+        if fixed_table and bridge_axis == 0:
+            # moving bridge, x axis across bridge - eg Hexagon ... (Bruce)
+            w = (
+                + yl
+                + inv_ryl @ xl
+                + inv_ryl @ inv_rxl @ zl
+                + inv_ryl @ inv_rxl @ inv_rzl @ xyzt
+            )  # fmt: skip
 
-    elif fixed_table and bridge_axis == 1:
-        # moving bridge y-axis across bridge - eg ? - for completeness
-        w = (
-            + xl
-            + inv_rxl @ yl
-            + inv_rxl @ inv_ryl @ zl
-            + inv_rxl @ inv_ryl @ inv_rzl @ xyzt
-        )  # fmt: skip
-    elif not fixed_table and bridge_axis == 0:
-        # fixed brige, moving table, x-axis across bridge eg. Mitutoyo  (Shishimi)
-        w =  (
-            - ryl @ yl 
-            + ryl @ xl 
-            + ryl @ inv_rxl @ zl 
-            + ryl @ inv_rxl @ inv_rzl @ xyzt
-        )  # fmt: skip
-    elif not fixed_table and bridge_axis == 1:
-        # fixed brige, moving table, y-axis across bridge eg. old PMM866
-        w = (
-            - rxl @ xl 
-            + rxl @ yl 
-            + rxl @ inv_ryl @ zl 
-            + rxl @ inv_ryl @ inv_rzl @ xyzt
-        )  # fmt: skip
-    else:
-        raise ValueError("Unknown cmm type")
+        elif fixed_table and bridge_axis == 1:
+            # moving bridge y-axis across bridge - eg ? - for completeness
+            w = (
+                + xl
+                + inv_rxl @ yl
+                + inv_rxl @ inv_ryl @ zl
+                + inv_rxl @ inv_ryl @ inv_rzl @ xyzt
+            )  # fmt: skip
+        elif not fixed_table and bridge_axis == 0:
+            # fixed brige, moving table, x-axis across bridge eg. Mitutoyo  (Shishimi)
+            w =  (
+                - ryl @ yl 
+                + ryl @ xl 
+                + ryl @ inv_rxl @ zl 
+                + ryl @ inv_rxl @ inv_rzl @ xyzt
+            )  # fmt: skip
+        elif not fixed_table and bridge_axis == 1:
+            # fixed brige, moving table, y-axis across bridge eg. old PMM866
+            w = (
+                - rxl @ xl 
+                + rxl @ yl 
+                + rxl @ inv_ryl @ zl 
+                + rxl @ inv_ryl @ inv_rzl @ xyzt
+            )  # fmt: skip
+        else:
+            raise ValueError("Unknown cmm type")
 
-    dev3d = w - xyz_in - xyzt
+        dev3d = w - xyz_in[:, i] - xyzt
+        dev_out[:, i] = dev3d
 
-    return dev3d
+    return dev_out
