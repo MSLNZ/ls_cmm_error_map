@@ -1,8 +1,10 @@
 from pathlib import Path
+
 import tomllib as toml
+
 import cmm_error_map.data_cmpts as dc
 
-config_folder = Path(__file__).parent.resolve()
+config_folder = Path(__file__).parent.parent.parent / "config"
 machines_toml = config_folder / "machines.toml"
 artefacts_toml = config_folder / "artefacts.toml"
 

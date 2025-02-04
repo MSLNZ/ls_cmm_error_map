@@ -9,7 +9,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-import cmm_error_map.config.config as cf
+import cmm_error_map.config as cf
 import cmm_error_map.data_cmpts as dc
 import cmm_error_map.mpl_2014.design_matrix_linear as design_old
 

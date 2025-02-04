@@ -18,7 +18,7 @@ from pyqtgraph.dockarea.DockArea import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
 
-import cmm_error_map.config.config as cf
+import cmm_error_map.config as cf
 import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
@@ -691,12 +691,10 @@ class MainWindow(qtw.QMainWindow):
         """
         print("debug button pushed")
         # debug
-        for mmt in self.machine.measurements.values():
-            if mmt.cmm_dev is None:
-                print(f"{mmt.name} has cmm_nominal None")
-            else:
-                print(f"{mmt.name} has cmm_nominal {mmt.cmm_dev.shape=}")
-        # end debug
+        # slider change
+        slider = self.slider_group.child("y_axis", "Ryz")
+        slider.setValue(2.5)
+        print("{slider.value()=}")
 
 
 def main():
@@ -712,4 +710,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # logging.basicConfig(filename="/logs/app.log")
     main()
