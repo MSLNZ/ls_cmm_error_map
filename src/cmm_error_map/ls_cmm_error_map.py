@@ -221,6 +221,7 @@ class MainWindow(qtw.QMainWindow):
                     for child in axis_group.children():
                         child.setValue(0.0)
         self.replot()
+        logging.info("finished update_model")
 
     def make_probe_controls(self) -> Parameter:
         """
@@ -689,12 +690,11 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        print("debug button pushed")
+        logging.debug("Debug button pressed!")
         # debug
         # slider change
         slider = self.slider_group.child("y_axis", "Ryz")
         slider.setValue(2.5)
-        print("{slider.value()=}")
 
 
 def main():
@@ -710,5 +710,15 @@ def main():
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(filename="/logs/app.log")
+    import logging
+
+    logging.basicConfig(
+        filename=cf.log_folder / "cmm_error_map.log",
+        encoding="utf-8",
+        filemode="a",
+        format="{asctime} - {created:.6f} - {name} - {levelname} - {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.DEBUG,
+    )
     main()

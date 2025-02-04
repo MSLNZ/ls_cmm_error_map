@@ -7,6 +7,7 @@ import cmm_error_map.data_cmpts as dc
 config_folder = Path(__file__).parent.parent.parent / "config"
 machines_toml = config_folder / "machines.toml"
 artefacts_toml = config_folder / "artefacts.toml"
+log_folder = Path(__file__).parent.parent.parent / "logs"
 
 
 def read_toml(fn, input_type):

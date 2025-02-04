@@ -7,8 +7,12 @@ only simplification is angle approximation in matrices
 allow the input to be a `numpy.Polynomial` object
 """
 
+import logging
+
 import numpy as np
 from numpy.polynomial import Polynomial
+
+logger = logging.getLogger(__name__)
 
 
 def evaluate_polynomials(
@@ -66,6 +70,8 @@ def model_matrix(
     return the cmm deviation at the nominal points in xyz_in
     for probe lengths xyzt for the model in model_params
     """
+    logger.debug("in model_matrix")
+
     if not fixed_table:
         # table movement is in opposite direction to probe position for a moving table
         dirn = [1, 1, 1]
