@@ -30,7 +30,7 @@ import scipy.spatial.transform as st
 
 import cmm_error_map.design_poly as design
 
-model_parameters_dict = {
+model_parameters_zero = {
     "Txx": 0.0,
     "Txy": 0.0,
     "Txz": 0.0,
@@ -332,7 +332,7 @@ legex574 = Machine(
     boxes={},
     measurements={},
     probes={},
-    model_params=model_parameters_dict.copy(),
+    model_params=model_parameters_zero.copy(),
 )
 
 pmm_866 = Machine(
@@ -346,7 +346,7 @@ pmm_866 = Machine(
     boxes={},
     measurements={},
     probes={},
-    model_params=model_parameters_dict.copy(),
+    model_params=model_parameters_zero.copy(),
 )
 
 

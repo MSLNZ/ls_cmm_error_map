@@ -70,7 +70,7 @@ pmax = {
     "Wyz": 1e-8,
 }
 
-mp = dc.model_parameters_dict
+mp = dc.model_parameters_zero
 
 keys_to_test = list(mp.keys())[:-3]
 

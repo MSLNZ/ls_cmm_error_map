@@ -210,11 +210,11 @@ class MainWindow(qtw.QMainWindow):
             return
         control_name = changes[0][0].name()
         slider_value = changes[0][2]
-        if control_name in dc.model_parameters_dict.keys():
+        if control_name in dc.model_parameters_zero.keys():
             slider_factor = gc.slider_factors[control_name]
             self.machine.model_params[control_name] = slider_value * slider_factor
         elif control_name == "btn_reset_all":
-            self.machine.model_params = dc.model_parameters_dict.copy()
+            self.machine.model_params = dc.model_parameters_zero.copy()
             # update sliders
             with self.slider_group.treeChangeBlocker():
                 for axis_group in self.slider_group.children():
@@ -715,10 +715,10 @@ if __name__ == "__main__":
     logging.basicConfig(
         filename=cf.log_folder / "cmm_error_map.log",
         encoding="utf-8",
-        filemode="a",
-        format="{asctime} - {created:.6f} - {name} - {levelname} - {message}",
-        style="{",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        filemode="w",
+        format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
+        datefmt="%Y-%m-%d %H:%M",
         level=logging.DEBUG,
     )
+
     main()
