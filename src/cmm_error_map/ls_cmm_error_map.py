@@ -35,6 +35,7 @@ class MainWindow(qtw.QMainWindow):
         self.nmmts = 0
         self.pens = {}
         self.freeze_gui = False
+        self.poly_option = False
         self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
@@ -43,7 +44,7 @@ class MainWindow(qtw.QMainWindow):
     def setup_gui(self):
         self.dock_area = DockArea()
         self.summary = qtw.QTextEdit()
-        self.make_model_sliders()
+        self.make_model_gui()
         self.make_probe_controls()
         self.make_measurement_controls()
         self.make_snapshot_controls()
@@ -154,7 +155,10 @@ class MainWindow(qtw.QMainWindow):
             slider_factor = gc.slider_factors[control_name]
             axis_group = self.slider_group.child(axis_children[axis_id])
             slider_value = axis_group.child(control_name).value()
-            self.machine.model_params[control_name] = slider_value * slider_factor
+            self.machine.model_params[control_name] = [
+                0.0,
+                slider_value * slider_factor,
+            ]
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
@@ -165,11 +169,15 @@ class MainWindow(qtw.QMainWindow):
         self.update_measurements()
         self.update_prb_lists()
 
-    def make_model_sliders(self) -> Parameter:
+    def make_model_gui(self):
         # create sliders
         self.slider_group = Parameter.create(
-            type="group", title="Linear Model", name="linear_model"
+            type="group", title="Error Model", name="linear_model"
         )
+        self.slider_group.addChild(
+            dict(type="bool", title="Show Polynomials", name="poly_option")
+        )
+
         x_axis = self.slider_group.addChild(
             dict(type="group", title="X axis", name="x_axis", expanded=False)
         )
@@ -182,10 +190,19 @@ class MainWindow(qtw.QMainWindow):
         squareness = self.slider_group.addChild(
             dict(type="group", title="Squareness", name="squareness", expanded=False)
         )
-        axes = [x_axis, y_axis, z_axis, squareness]
+        self.slider_axes = [x_axis, y_axis, z_axis, squareness]
 
+        self.make_model_sliders()
+
+        self.slider_group.addChild(
+            dict(type="action", name="btn_reset_all", title="Reset Model")
+        )
+
+        self.slider_group.sigTreeStateChanged.connect(self.update_model)
+
+    def make_model_sliders(self):
         for key, axis in gc.axis_group.items():
-            axes[axis].addChild(
+            self.slider_axes[axis].addChild(
                 dict(
                     type="slider",
                     name=key,
@@ -193,14 +210,20 @@ class MainWindow(qtw.QMainWindow):
                     limits=[-5.0, 5.0],
                     step=0.1,
                     value=0,
-                )
+                ),
+                existOk=True,
             )
-
-        self.slider_group.addChild(
-            dict(type="action", name="btn_reset_all", title="Reset Model")
-        )
-
-        self.slider_group.sigTreeStateChanged.connect(self.update_model)
+            if self.poly_option:
+                logging.debug("adding poly str")
+                self.slider_axes[axis].addChild(
+                    dict(
+                        type="str",
+                        name=key + "poly",
+                        title="poly coeffs",
+                        value="hello I'm not a poly",
+                    ),
+                    existOk=True,
+                )
 
     def update_model(self, group, changes):
         """
@@ -209,10 +232,22 @@ class MainWindow(qtw.QMainWindow):
         if self.freeze_gui:
             return
         control_name = changes[0][0].name()
-        slider_value = changes[0][2]
+        control_value = changes[0][2]
         if control_name in dc.model_parameters_zero.keys():
             slider_factor = gc.slider_factors[control_name]
-            self.machine.model_params[control_name] = slider_value * slider_factor
+            self.machine.model_params[control_name] = [
+                0.0,
+                control_value * slider_factor,
+            ]
+        elif control_name == "poly_option":
+            # redraw controls
+            self.freeze_gui = True
+            logging.debug(f"changing poly option {control_value}")
+            self.poly_option = control_value
+            for i in range(4):
+                self.slider_axes[i].clearChildren()
+            self.make_model_sliders()
+            self.freeze_gui = False
         elif control_name == "btn_reset_all":
             self.machine.model_params = dc.model_parameters_zero.copy()
             # update sliders

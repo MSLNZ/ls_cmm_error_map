@@ -84,7 +84,7 @@ def make_models():
     tests = {}
     for key in keys_to_test:
         test = mp.copy()
-        test[key] = pmax[key]
+        test[key] = [0.0, pmax[key]]
         tests[key] = test
     return tests
 
@@ -224,7 +224,7 @@ def test_XYZ_regression(model_params, mmt):
 
     # matplotlib code
     signed_mp = {
-        key: sign_corrections[key] * value for key, value in model_params.items()
+        key: sign_corrections[key] * value[1] for key, value in model_params.items()
     }
     params = list(signed_mp.values())
     xt, yt, zt = mmt.probe.length

@@ -31,53 +31,52 @@ import scipy.spatial.transform as st
 import cmm_error_map.design_poly as design
 
 model_parameters_zero = {
-    "Txx": 0.0,
-    "Txy": 0.0,
-    "Txz": 0.0,
-    "Tyx": 0.0,
-    "Tyy": 0.0,
-    "Tyz": 0.0,
-    "Tzx": 0.0,
-    "Tzy": 0.0,
-    "Tzz": 0.0,
-    "Rxx": 0.0,
-    "Rxy": 0.0,
-    "Rxz": 0.0,
-    "Ryx": 0.0,
-    "Ryy": 0.0,
-    "Ryz": 0.0,
-    "Rzx": 0.0,
-    "Rzy": 0.0,
-    "Rzz": 0.0,
-    "Wxy": 0.0,
-    "Wxz": 0.0,
-    "Wyz": 0.0,
+    "Txx": [0.0, 0.0],
+    "Txy": [0.0, 0.0],
+    "Txz": [0.0, 0.0],
+    "Tyx": [0.0, 0.0],
+    "Tyy": [0.0, 0.0],
+    "Tyz": [0.0, 0.0],
+    "Tzx": [0.0, 0.0],
+    "Tzy": [0.0, 0.0],
+    "Tzz": [0.0, 0.0],
+    "Rxx": [0.0, 0.0],
+    "Rxy": [0.0, 0.0],
+    "Rxz": [0.0, 0.0],
+    "Ryx": [0.0, 0.0],
+    "Ryy": [0.0, 0.0],
+    "Ryz": [0.0, 0.0],
+    "Rzx": [0.0, 0.0],
+    "Rzy": [0.0, 0.0],
+    "Rzz": [0.0, 0.0],
+    "Wxy": [0.0, 0.0],
+    "Wxz": [0.0, 0.0],
+    "Wyz": [0.0, 0.0],
 }
-
 
 # some non-zero parmeters for quick tests
 model_parameters_test = {
-    "Txx": 1.33e-05,
-    "Txy": 0.0,
-    "Txz": 0.0,
-    "Tyx": -1.12e-05,
-    "Tyy": -5.09e-06,
-    "Tyz": 0.0,
-    "Tzx": 2.6e-05,
-    "Tzy": 4.6e-06,
-    "Tzz": 3.34e-08,
-    "Rxx": 7.49e-09,
-    "Rxy": 1.54e-08,
-    "Rxz": 5e-09,
-    "Ryx": -4.58e-09,
-    "Ryy": -1.43e-08,
-    "Ryz": 2.19e-08,
-    "Rzx": 2.49e-09,
-    "Rzy": -7.94e-10,
-    "Rzz": 4.78e-08,
-    "Wxy": 0.0,
-    "Wxz": 0.0,
-    "Wyz": 0.0,
+    "Txx": [0.0, 1.33e-05],
+    "Txy": [0.0, 0.0],
+    "Txz": [0.0, 0.0],
+    "Tyx": [0.0, -1.12e-05],
+    "Tyy": [0.0, -5.09e-06],
+    "Tyz": [0.0, 0.0],
+    "Tzx": [0.0, 2.6e-05],
+    "Tzy": [0.0, 4.6e-06],
+    "Tzz": [0.0, 3.34e-08],
+    "Rxx": [0.0, 7.49e-09],
+    "Rxy": [0.0, 1.54e-08],
+    "Rxz": [0.0, 5e-09],
+    "Ryx": [0.0, -4.58e-09],
+    "Ryy": [0.0, -1.43e-08],
+    "Ryz": [0.0, 2.19e-08],
+    "Rzx": [0.0, 2.49e-09],
+    "Rzy": [0.0, -7.94e-10],
+    "Rzz": [0.0, 4.78e-08],
+    "Wxy": [0.0, 0.0],
+    "Wxz": [0.0, 0.0],
+    "Wyz": [0.0, 0.0],
 }
 
 
@@ -115,7 +114,9 @@ class BoxGrid:
     grid_nominal: np.array  # (3, n)
     grid_dev: np.array  # (3, n)
 
-    def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
+    def recalculate(
+        self, model_params: dict[str, float | list[float]], cmm_model: MachineType
+    ):
         """
         update data with new model_parameters
         """
@@ -151,7 +152,9 @@ class Measurement:
     mmt_dev: np.ndarray  # (3, n) the deformed - nominal position in artefact CSY
     fixed: bool = False  # if True, data does not change with model parameters
 
-    def recalculate(self, model_params: dict[str, float], cmm_model: MachineType):
+    def recalculate(
+        self, model_params: dict[str, float | list[float]], cmm_model: MachineType
+    ):
         """
         update data with new model_parameters
         """
@@ -306,7 +309,7 @@ class Machine:
     boxes: dict[str, BoxGrid]
     measurements: dict[str, Measurement]
     probes: dict[str, Probe]
-    model_params: dict[str, float]
+    model_params: dict[str, list[float]]
 
     def recalculate(self):
         """
