@@ -35,7 +35,7 @@ class MainWindow(qtw.QMainWindow):
         self.nmmts = 0
         self.pens = {}
         self.freeze_gui = False
-        self.poly_option = False
+        self.poly_txts = {}
         self.plot_docks = {}
         self.plot3d_dock = None
         self.setup_gui()
@@ -192,15 +192,6 @@ class MainWindow(qtw.QMainWindow):
         )
         self.slider_axes = [x_axis, y_axis, z_axis, squareness]
 
-        self.make_model_sliders()
-
-        self.slider_group.addChild(
-            dict(type="action", name="btn_reset_all", title="Reset Model")
-        )
-
-        self.slider_group.sigTreeStateChanged.connect(self.update_model)
-
-    def make_model_sliders(self):
         for key, axis in gc.axis_group.items():
             self.slider_axes[axis].addChild(
                 dict(
@@ -213,17 +204,36 @@ class MainWindow(qtw.QMainWindow):
                 ),
                 existOk=True,
             )
-            if self.poly_option:
-                logging.debug("adding poly str")
-                self.slider_axes[axis].addChild(
-                    dict(
-                        type="str",
-                        name=key + "poly",
-                        title="poly coeffs",
-                        value="hello I'm not a poly",
-                    ),
-                    existOk=True,
-                )
+
+            logging.debug("adding poly str")
+            poly_txt = self.slider_axes[axis].addChild(
+                dict(
+                    type="str",
+                    name=key + "_poly",
+                    title="    poly",
+                    value="0.0, 1.0",
+                ),
+                existOk=True,
+            )
+            poly_txt.show(False)
+            self.poly_txts[key] = poly_txt
+
+        self.slider_group.addChild(
+            dict(type="action", name="btn_reset_all", title="Reset Model")
+        )
+
+        self.slider_group.sigTreeStateChanged.connect(self.update_model)
+
+    def parse_poly_str(self, text: str) -> np.array:
+        """
+        take gui poly field input and return array of coefficients
+        """
+        try:
+            coeffs = [float(c) for c in text.split(",")]
+            coeffs = np.array(coeffs)
+        except ValueError:
+            coeffs = None
+        return coeffs
 
     def update_model(self, group, changes):
         """
@@ -233,20 +243,27 @@ class MainWindow(qtw.QMainWindow):
             return
         control_name = changes[0][0].name()
         control_value = changes[0][2]
-        if control_name in dc.model_parameters_zero.keys():
-            slider_factor = gc.slider_factors[control_name]
-            self.machine.model_params[control_name] = [
-                0.0,
-                control_value * slider_factor,
-            ]
+        if control_name[:3] in dc.model_parameters_zero.keys():
+            slider_factor = gc.slider_factors[control_name[:3]]
+            logging.info(f"{control_name=}, {control_name[:3]}")
+            slider = changes[0][0].parent().child(control_name[:3])
+            slider_value = slider.value()
+            poly_txt = changes[0][0].parent().child(control_name[:3] + "_poly")
+            coeffs = self.parse_poly_str(poly_txt.value())
+            if coeffs is None:
+                # can't interpret string in poly_txt
+                poly_txt.setValue("0.0, 1.0")
+                coeffs = np.array([0.0, 1.0])
+
+            self.machine.model_params[control_name] = list(
+                slider_value * slider_factor * coeffs
+            )
         elif control_name == "poly_option":
-            # redraw controls
+            # show/hide controls
             self.freeze_gui = True
             logging.debug(f"changing poly option {control_value}")
-            self.poly_option = control_value
-            for i in range(4):
-                self.slider_axes[i].clearChildren()
-            self.make_model_sliders()
+            for poly_txt in self.poly_txts.values():
+                poly_txt.show(control_value)
             self.freeze_gui = False
         elif control_name == "btn_reset_all":
             self.machine.model_params = dc.model_parameters_zero.copy()
@@ -254,7 +271,9 @@ class MainWindow(qtw.QMainWindow):
             with self.slider_group.treeChangeBlocker():
                 for axis_group in self.slider_group.children():
                     for child in axis_group.children():
-                        child.setValue(0.0)
+                        "just reset sliders"
+                        if child.name() in dc.model_parameters_zero.keys():
+                            child.setValue(0.0)
         self.replot()
         logging.info("finished update_model")
 
