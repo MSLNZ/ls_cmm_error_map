@@ -79,27 +79,26 @@ dependencies = [
     { name = "ipykernel" },
     { name = "ipympl" },
     { name = "ipython" },
-    { name = "mathutils" },
-    { name = "matplotlib" },
     { name = "numpy" },
-    { name = "pandas" },
     { name = "pyopengl" },
     { name = "pyopengl-accelerate" },
     { name = "pyqtdarktheme" },
     { name = "pyqtgraph" },
     { name = "pyside6" },
     { name = "scipy" },
-    { name = "sympy" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
     { name = "line-profiler" },
+    { name = "matplotlib" },
+    { name = "pandas" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "ruff" },
+    { name = "sympy" },
 ]
 
 [package.metadata]
@@ -107,27 +106,26 @@ requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "ipympl", specifier = ">=0.9.4" },
     { name = "ipython", specifier = ">=8.26.0" },
-    { name = "mathutils", specifier = ">=3.3.0" },
-    { name = "matplotlib", specifier = ">=3.9.1" },
     { name = "numpy", specifier = "==1.26.3" },
-    { name = "pandas", specifier = ">=2.2.2" },
     { name = "pyopengl", specifier = ">=3.1.7" },
     { name = "pyopengl-accelerate", specifier = ">=3.1.7" },
     { name = "pyqtdarktheme", specifier = ">=2.1.0" },
     { name = "pyqtgraph", specifier = ">=0.13.7" },
     { name = "pyside6", specifier = ">=6.7.2" },
     { name = "scipy", specifier = ">=1.14.0" },
-    { name = "sympy", specifier = ">=1.13.3" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "line-profiler", specifier = ">=4.2.0" },
+    { name = "matplotlib", specifier = ">=3.9.1" },
+    { name = "pandas", specifier = ">=2.2.2" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-qt", specifier = ">=4.4.0" },
     { name = "ruff", specifier = ">=0.9.1" },
+    { name = "sympy", specifier = ">=1.13.3" },
 ]
 
 [[package]]
@@ -529,12 +527,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/61/6293341fbcc6c5b4469f49bd94f37fea5d2efc8cce441809012346a5b7d0/line_profiler-4.2.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:3137672a769717be4da3a6e006c3bd7b66ad4a341ba89ee749ef96c158a15b22", size = 1701191 },
     { url = "https://files.pythonhosted.org/packages/23/9c/ab8a94c30c082caca87bc0db78efe91372e45d35a700ef07ffe78ed10cda/line_profiler-4.2.0-cp313-cp313-win_amd64.whl", hash = "sha256:727e970d358616a1a33d51d696efec932a5ef7730785df62658bd7e74aa58951", size = 128232 },
 ]
-
-[[package]]
-name = "mathutils"
-version = "3.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5f/9d/e9b156c0e28b1a3fd970930bfd8b33f6cc5ae0863405ac46557225545b76/mathutils-3.3.0.tar.gz", hash = "sha256:b9371af8149f3f3f05ee165cb583b2df7b3fbc9935406d1c505a5276b8e563af", size = 245352 }
 
 [[package]]
 name = "matplotlib"

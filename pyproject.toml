@@ -9,8 +9,6 @@ dependencies = [
     "pyside6>=6.7.2",
     "numpy==1.26.3",
     "scipy>=1.14.0",
-    "pandas>=2.2.2",
-    "matplotlib>=3.9.1",
     "ipython>=8.26.0",
     "pyqtgraph>=0.13.7",
     "ipympl>=0.9.4",
@@ -18,8 +16,6 @@ dependencies = [
     "pyopengl>=3.1.7",
     "pyopengl-accelerate>=3.1.7",
     "pyqtdarktheme>=2.1.0",
-    "mathutils>=3.3.0",
-    "sympy>=1.13.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.11"
@@ -36,6 +32,9 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-qt>=4.4.0",
     "ruff>=0.9.1",
+    "pandas>=2.2.2",
+    "matplotlib>=3.9.1",
+    "sympy>=1.13.3",
 ]
 
 [tool.hatch.metadata]
