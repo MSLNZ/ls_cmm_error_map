@@ -157,4 +157,11 @@ def model_matrix(
         dev3d = w - xyz_in[:, i] - xyzt
         dev_out[:, i] = dev3d
 
+        # using polynomial terms for model parameters can mean there is  non-zero values at the
+        # zero position of CMM
+        # but the following line gives odd distortion
+        # this ony happens in very contrived examples
+        # leave commented oiut for now
+        # dev_out = dev_out - dev_out[:, 0:1]
+
     return dev_out

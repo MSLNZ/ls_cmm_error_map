@@ -202,7 +202,6 @@ class MainWindow(qtw.QMainWindow):
                     step=0.1,
                     value=0,
                 ),
-                existOk=True,
             )
 
             logging.debug("adding poly str")
@@ -213,7 +212,6 @@ class MainWindow(qtw.QMainWindow):
                     title="    poly",
                     value="0.0, 1.0",
                 ),
-                existOk=True,
             )
             poly_txt.show(False)
             self.poly_txts[key] = poly_txt
@@ -311,7 +309,7 @@ class MainWindow(qtw.QMainWindow):
             self.delete_group(grp, change)
         elif change == "Save to CSV":
             mmt = self.machine.measurements[grp.name()]
-            self.save_mmt(mmt)
+            self.save_snapshot(mmt)
 
     def delete_group(self, grp, change):
         if change == "Delete":
@@ -476,7 +474,7 @@ class MainWindow(qtw.QMainWindow):
 
         [kid.setValue(x) for x, kid in zip(new_vloc, grp_loc)]
 
-    def save_mmt(self, mmt: dc.Measurement):
+    def save_snapshot(self, mmt: dc.Measurement):
         dialog = gc.SaveSimulationDialog()
         if dialog.exec() == qtw.QDialog.Accepted:
             now = dt.datetime.now().isoformat(sep=" ")

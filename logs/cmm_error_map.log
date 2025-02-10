@@ -1,56 +1,112 @@
-2025-02-10 11:38     1323 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1324 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1325 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1325 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1326 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1327 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1328 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1328 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1329 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1330 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1331 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1331 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1332 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1333 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1334 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1334 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1335 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1336 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1336 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1337 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1338 DEBUG    root                           make_model_gui  adding poly str
-2025-02-10 11:38     1343 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1345 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1356 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1358 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1364 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1373 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1379 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1386 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1388 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1390 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1393 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1394 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1396 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1398 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1399 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1401 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1403 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1404 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1406 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1408 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1409 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1411 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1574 DEBUG    root                           update_model  changing poly option False
-2025-02-10 11:38     1576 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1578 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1587 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     1597 INFO     root                           update_model  finished update_model
-2025-02-10 11:38     2092 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     2093 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     2095 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     5893 DEBUG    root                           update_model  changing poly option True
-2025-02-10 11:38     5898 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     5904 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     5912 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
-2025-02-10 11:38     5914 INFO     root                           update_model  finished update_model
+2025-02-10 11:59     1358 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1358 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1359 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1360 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1361 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1362 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1362 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1363 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1364 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1364 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1365 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1366 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1367 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1367 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1368 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1369 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1369 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1370 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1371 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1372 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1372 DEBUG    root                           make_model_gui  adding poly str
+2025-02-10 11:59     1377 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1380 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1391 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1392 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1394 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1397 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1399 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1401 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1402 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1404 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1406 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1407 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1409 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1411 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1412 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1414 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1416 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1417 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1419 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1421 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1422 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1424 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1587 DEBUG    root                           update_model  changing poly option False
+2025-02-10 11:59     1588 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1590 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1593 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     1596 INFO     root                           update_model  finished update_model
+2025-02-10 11:59     2111 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     2113 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59     2116 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11199 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11205 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11219 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11223 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11234 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11258 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11259 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11262 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11268 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11271 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    11274 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    29414 DEBUG    root                           update_model  changing poly option True
+2025-02-10 11:59    29418 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    29424 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    29430 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 11:59    29434 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    42305 INFO     root                           update_model  control_name='Ryy_poly', Ryy
+2025-02-10 12:00    42306 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    42310 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    42314 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    42319 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47586 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47587 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47593 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47605 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47616 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47644 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47645 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47646 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47649 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47653 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47709 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47710 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47713 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47717 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47723 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47778 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47778 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47783 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47790 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47795 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47849 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47849 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47851 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47854 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47859 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47924 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47925 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47928 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47932 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47939 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    47985 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    47985 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47987 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47990 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    47993 INFO     root                           update_model  finished update_model
+2025-02-10 12:00    48050 INFO     root                           update_model  control_name='Ryy', Ryy
+2025-02-10 12:00    48050 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    48053 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    48057 DEBUG    cmm_error_map.design_poly      model_matrix  in model_matrix
+2025-02-10 12:00    48061 INFO     root                           update_model  finished update_model
