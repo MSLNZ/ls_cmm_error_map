@@ -1,6 +1,6 @@
 # from dataclasses import dataclass, field
-
 import datetime as dt
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +13,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.data_cmpts as dc
+
+logger = logging.getLogger(__name__)
 
 # =========== THEME===============
 # qdarktheme setup parameters
@@ -510,7 +512,7 @@ class Plot3dDock(Dock):
         self.tree.move(0, 0)
 
     def update_mmts_plotted(self):
-        self.update_pens(self.pens)
+        self.update_pens()
         self.replot()
 
     def update_plot_plates(self):
@@ -546,7 +548,7 @@ class Plot3dDock(Dock):
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot3d_plate(self.plot_widget, mmt)
-                    self.update_pens(self.pens)
+                    self.update_pens()
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
@@ -580,8 +582,7 @@ class Plot3dDock(Dock):
         self.box_lineplot = None
         self.plot_data = {}
 
-    def update_pens(self, pens):
-        self.pens = pens
+    def update_pens(self):
         if len(self.plot_data) > 0:
             for mmt_name, list_items in self.plot_data.items():
                 balls, lines = list_items
@@ -744,13 +745,20 @@ class PlotPlateDock(Dock):
         self.machine = machine
 
     def update_display(self):
-        self.update_pens(self.pens)
+        self.update_pens()
         self.replot()
 
-    def update_pens(self, pens):
-        self.pens = pens
-
+    def update_pens(self):
+        logger.debug(list(self.pens.keys()))
         for mmt_name, list_items in self.plot_data.items():
+            # debug
+            if (mmt_name == "mmt_control_grp0") and (
+                "mmt_control_grp0" not in self.pens.keys()
+            ):
+                # I'm about to throw an error
+                # so lets add a breakpoint
+                logger.debug(list(self.pens.keys()))
+
             balls, lines = list_items
             lines.setPen(self.pens[mmt_name])
             balls.setSymbolPen(self.pens[mmt_name])
@@ -811,7 +819,7 @@ class PlotPlateDock(Dock):
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot2d_plate(self.plot_widget, mmt)
-                    self.update_pens(self.pens)
+                    self.update_pens()
 
                 # update plot
 

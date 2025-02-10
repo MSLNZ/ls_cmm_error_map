@@ -253,7 +253,7 @@ class MainWindow(qtw.QMainWindow):
                 poly_txt.setValue("0.0, 1.0")
                 coeffs = np.array([0.0, 1.0])
 
-            self.machine.model_params[control_name] = list(
+            self.machine.model_params[control_name[:3]] = list(
                 slider_value * slider_factor * coeffs
             )
         elif control_name == "poly_option":
@@ -441,7 +441,8 @@ class MainWindow(qtw.QMainWindow):
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
-            dock.update_pens(self.pens)
+            dock.pens = self.pens
+            dock.update_pens()
             dock.update_measurement_list()
         self.set_mmt_colors()
 
@@ -620,7 +621,8 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.addDock(new_plot_dock, position="bottom")
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
-        new_plot_dock.update_pens(self.pens)
+        new_plot_dock.pens = self.pens
+        new_plot_dock.update_pens()
 
     def add_new_plot_bar_dock(self, _parameter, name=None):
         """
