@@ -34,6 +34,7 @@ dev = [
     "line-profiler>=4.2.0",
     "pytest>=8.3.4",
     "pytest-cov>=6.0.0",
+    "pytest-qt>=4.4.0",
     "ruff>=0.9.1",
 ]
 
@@ -42,3 +43,6 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cmm_error_map"]
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::DeprecationWarning"]

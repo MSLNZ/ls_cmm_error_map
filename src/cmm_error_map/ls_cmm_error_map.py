@@ -4,6 +4,7 @@ main gui for cmm error map app
 """
 
 import datetime as dt
+import logging
 import pickle
 import sys
 from pathlib import Path
@@ -22,6 +23,15 @@ import cmm_error_map.config as cf
 import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
+
+logging.basicConfig(
+    filename=cf.log_folder / "cmm_error_map.log",
+    encoding="utf-8",
+    filemode="w",
+    format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M",
+    level=logging.DEBUG,
+)
 
 DEBUG = True
 
@@ -175,7 +185,7 @@ class MainWindow(qtw.QMainWindow):
             type="group", title="Error Model", name="linear_model"
         )
         self.slider_group.addChild(
-            dict(type="bool", title="Show Polynomials", name="poly_option")
+            dict(type="bool", title="Show Polynomials", name="poly_option", value=False)
         )
 
         x_axis = self.slider_group.addChild(
@@ -201,16 +211,17 @@ class MainWindow(qtw.QMainWindow):
                     limits=[-5.0, 5.0],
                     step=0.1,
                     value=0,
+                    default=0,
                 ),
             )
 
-            logging.debug("adding poly str")
             poly_txt = self.slider_axes[axis].addChild(
                 dict(
                     type="str",
                     name=key + "_poly",
                     title="    poly",
                     value="0.0, 1.0",
+                    default="0.0, 1.0",
                 ),
             )
             poly_txt.show(False)
@@ -243,7 +254,7 @@ class MainWindow(qtw.QMainWindow):
         control_value = changes[0][2]
         if control_name[:3] in dc.model_parameters_zero.keys():
             slider_factor = gc.slider_factors[control_name[:3]]
-            logging.info(f"{control_name=}, {control_name[:3]}")
+
             slider = changes[0][0].parent().child(control_name[:3])
             slider_value = slider.value()
             poly_txt = changes[0][0].parent().child(control_name[:3] + "_poly")
@@ -259,7 +270,7 @@ class MainWindow(qtw.QMainWindow):
         elif control_name == "poly_option":
             # show/hide controls
             self.freeze_gui = True
-            logging.debug(f"changing poly option {control_value}")
+
             for poly_txt in self.poly_txts.values():
                 poly_txt.show(control_value)
             self.freeze_gui = False
@@ -273,7 +284,6 @@ class MainWindow(qtw.QMainWindow):
                         if child.name() in dc.model_parameters_zero.keys():
                             child.setValue(0.0)
         self.replot()
-        logging.info("finished update_model")
 
     def make_probe_controls(self) -> Parameter:
         """
@@ -301,20 +311,39 @@ class MainWindow(qtw.QMainWindow):
         new_grp = parent.addChild(grp_params, autoIncrementName=True)
         new_grp.child("prb_title").sigValueChanged.connect(self.change_prb_title)
         new_grp.child("prb_title").setValue(new_title)
-        new_grp.sigContextMenu.connect(self.delete_group)
+        new_grp.sigContextMenu.connect(self.delete_prb)
         self.nprbs += 1
 
     def mmt_menu(self, grp, change):
         if change == "Delete":
-            self.delete_group(grp, change)
+            self.delete_mmt(grp, change)
         elif change == "Save to CSV":
             mmt = self.machine.measurements[grp.name()]
             self.save_snapshot(mmt)
 
-    def delete_group(self, grp, change):
+    def delete_mmt(self, grp, change):
         if change == "Delete":
             self.machine.measurements.pop(grp.name())
             self.recalculate()
+            grp.remove()
+            self.update_prb_lists()
+            self.update_measurements()
+
+    def delete_prb(self, grp, change):
+        if change == "Delete":
+            # check if probe is in use
+            prb_in_use = False
+            for mmt in self.machine.measurements.values():
+                if mmt.probe.name == grp.name():
+                    prb_in_use = True
+            if self.plot3d_dock.probe_box.value() == grp.name():
+                prb_in_use = True
+            if prb_in_use:
+                qtw.QMessageBox.warning(
+                    self, "Warning", "Can not delete this probe\nas it is in use"
+                )
+                return
+            self.machine.probes.pop(grp.name())
             grp.remove()
             self.update_prb_lists()
             self.update_measurements()
@@ -689,7 +718,9 @@ class MainWindow(qtw.QMainWindow):
         )
         if not filename:
             return
+        self.restore_filename(filename)
 
+    def restore_filename(self, filename):
         with open(filename, "rb") as fp:
             state_dict = pickle.load(fp)
 
@@ -744,11 +775,10 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        logging.debug("Debug button pressed!")
-        # debug
-        # slider change
-        slider = self.slider_group.child("y_axis", "Ryz")
-        slider.setValue(2.5)
+        logging.debug("before restore")
+        filename = cf.config_folder / "gui_configs" / "Legex-3-axis-6-prbs.pkl"
+        self.restore_filename(filename)
+        logging.debug("after restore")
 
 
 def main():
@@ -757,22 +787,13 @@ def main():
     qdarktheme.setup_theme(**gc.main_theme)
 
     w = MainWindow()
+    logging.debug("MainWindow created")
     w.showMaximized()
     w.show()
+    logging.debug("showing")
 
     pg.exec()
 
 
 if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(
-        filename=cf.log_folder / "cmm_error_map.log",
-        encoding="utf-8",
-        filemode="w",
-        format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
-        datefmt="%Y-%m-%d %H:%M",
-        level=logging.DEBUG,
-    )
-
     main()

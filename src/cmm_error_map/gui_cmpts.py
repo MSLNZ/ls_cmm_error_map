@@ -115,6 +115,7 @@ dock3d_control_grp = {
             "title": "Magnification",
             "span": magnification_span,
             "value": 5000,
+            "default": 5000,
         },
     ],
 }
@@ -130,6 +131,7 @@ grp_probe_lengths = {
             "title": "X/mm",
             "type": "float",
             "value": 0.0,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
         {
@@ -137,6 +139,7 @@ grp_probe_lengths = {
             "title": "Y/mm",
             "type": "float",
             "value": 0.0,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
         {
@@ -144,6 +147,7 @@ grp_probe_lengths = {
             "title": "Z/mm",
             "type": "float",
             "value": 0.0,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
     ],
@@ -177,6 +181,7 @@ grp_location = {
             "title": "X/mm",
             "type": "float",
             "value": 0.000,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
         {
@@ -184,6 +189,7 @@ grp_location = {
             "title": "Y/mm",
             "type": "float",
             "value": 0.000,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
         {
@@ -191,6 +197,7 @@ grp_location = {
             "title": "Z/mm",
             "type": "float",
             "value": 0.000,
+            "default": 0.0,
             "format": "{value:.3f}",
         },
         {
@@ -198,6 +205,7 @@ grp_location = {
             "title": "Centre on CMM",
             "type": "action",
             "value": 0,
+            "default": 0,
         },
     ],
 }
@@ -211,7 +219,7 @@ grp_rotation = {
             "name": "X",
             "title": "X/°",
             "type": "float",
-            "value": 0.0,
+            "default": 0.0,
             "format": "{value:.1f}",
         },
         {
@@ -219,6 +227,7 @@ grp_rotation = {
             "title": "Y/°",
             "type": "float",
             "value": 0.0,
+            "default": 0.0,
             "format": "{value:.1f}",
         },
         {
@@ -226,6 +235,7 @@ grp_rotation = {
             "title": "Z/°",
             "type": "float",
             "value": 0.0,
+            "default": 0.0,
             "format": "{value:.1f}",
         },
     ],
@@ -281,6 +291,7 @@ dock2d_control_grp = {
             "title": "Plot Title",
             "type": "str",
             "value": "Plot 0",
+            "default": "Plot 0",
         },
         {
             "name": "mmts_to_plot",
@@ -294,6 +305,7 @@ dock2d_control_grp = {
             "title": "Magnification",
             "span": magnification_span,
             "value": 5000,
+            "default": 5000,
         },
     ],
 }
@@ -309,6 +321,7 @@ dock1d_control_grp = {
             "title": "Plot Title",
             "type": "str",
             "value": "Plot 0",
+            "default": "Plot 0",
         },
         {
             "name": "mmts_to_plot",
@@ -749,16 +762,7 @@ class PlotPlateDock(Dock):
         self.replot()
 
     def update_pens(self):
-        logger.debug(list(self.pens.keys()))
         for mmt_name, list_items in self.plot_data.items():
-            # debug
-            if (mmt_name == "mmt_control_grp0") and (
-                "mmt_control_grp0" not in self.pens.keys()
-            ):
-                # I'm about to throw an error
-                # so lets add a breakpoint
-                logger.debug(list(self.pens.keys()))
-
             balls, lines = list_items
             lines.setPen(self.pens[mmt_name])
             balls.setSymbolPen(self.pens[mmt_name])

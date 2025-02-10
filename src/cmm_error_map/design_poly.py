@@ -70,7 +70,7 @@ def model_matrix(
     return the cmm deviation at the nominal points in xyz_in
     for probe lengths xyzt for the model in model_params
     """
-    logger.debug("in model_matrix")
+    # logger.debug("in model_matrix")
 
     if not fixed_table:
         # table movement is in opposite direction to probe position for a moving table
