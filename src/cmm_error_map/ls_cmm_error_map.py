@@ -25,7 +25,7 @@ import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
 logging.basicConfig(
-    filename=cf.log_folder / "cmm_error_map.log",
+    # filename=cf.log_folder / "cmm_error_map.log",
     encoding="utf-8",
     filemode="w",
     format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
@@ -33,7 +33,7 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 
-DEBUG = True
+DEBUG = False
 
 
 class MainWindow(qtw.QMainWindow):

@@ -1,13 +1,25 @@
+import os, sys
 from pathlib import Path
-
+import logging
 import tomllib as toml
 
 import cmm_error_map.data_cmpts as dc
 
-config_folder = Path(__file__).parent.parent.parent / "config"
+
+logger = logging.getLogger(__name__)
+
+base_folder = Path(
+    getattr(sys, "_MEIPASS", Path(__file__).parent.parent.parent.resolve())
+)
+
+logger.debug(f"{base_folder=}")
+
+
+config_folder = base_folder / "config"
 machines_toml = config_folder / "machines.toml"
 artefacts_toml = config_folder / "artefacts.toml"
-log_folder = Path(__file__).parent.parent.parent / "logs"
+# TODO change for pyinstaller
+log_folder = base_folder / "logs"
 
 
 def read_toml(fn, input_type):
