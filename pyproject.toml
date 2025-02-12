@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "nuitka>=2.6.4",
 ]
 
 [tool.hatch.metadata]
