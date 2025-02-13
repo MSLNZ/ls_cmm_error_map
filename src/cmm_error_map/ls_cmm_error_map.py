@@ -30,7 +30,7 @@ logging.basicConfig(
     filemode="w",
     format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
     datefmt="%Y-%m-%d %H:%M",
-    level=logging.DEBUG,
+    level=logging.CRITICAL,
 )
 
 DEBUG = False
@@ -788,6 +788,7 @@ def main():
 
     w = MainWindow()
     logging.debug("MainWindow created")
+    w.setWindowIcon(pg.QtGui.QIcon(cf.fn_icon.as_posix()))
     w.showMaximized()
     w.show()
     logging.debug("showing")

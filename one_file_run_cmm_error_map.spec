@@ -1,7 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
-config_data = [('config', 'config'), ('static','static')]
+config_data = [('config', 'config')]
 
 a = Analysis(
     ['run_cmm_error_map.py'],
@@ -18,42 +17,23 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-splash = Splash(
-    'static\splash.png',
-    binaries=a.binaries,
-    datas=a.datas,
-    text_pos=None,
-    text_size=12,
-    minify_script=True,
-    always_on_top=True,
-)
-
 exe = EXE(
     pyz,
     a.scripts,
-    splash,
-    splash.binaries,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name='cmm_error_map',
+    name='run_cmm_error_map',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=True,
-    icon = "static\icon.ico",
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='run_cmm_error_map',
 )
