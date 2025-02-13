@@ -421,7 +421,7 @@ def plot3d_plate(
     and magnification by update_plot_plate3d
     """
     # undeformed plate with no transform, zero length probe
-    balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=20)
+    balls = gl.GLScatterPlotItem(color=pg.mkColor(col), size=10)
     lines = gl.GLLinePlotItem(mode="lines", color=pg.mkColor(col))
 
     update_plot3d_plate(
