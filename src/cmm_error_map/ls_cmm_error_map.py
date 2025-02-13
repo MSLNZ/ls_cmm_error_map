@@ -33,7 +33,7 @@ logging.basicConfig(
     level=logging.CRITICAL,
 )
 
-DEBUG = False
+DEBUG_BTN = False
 
 
 class MainWindow(qtw.QMainWindow):
@@ -89,7 +89,7 @@ class MainWindow(qtw.QMainWindow):
         btn_restore_state.sigActivated.connect(self.restore_state)
 
         # button for debug purposes
-        if DEBUG:
+        if DEBUG_BTN:
             btn_debug = self.control_group.addChild(
                 dict(type="action", name="btn_debug", title="DO NOT PUSH ME")
             )
