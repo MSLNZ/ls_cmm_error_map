@@ -20,6 +20,6 @@ def test_app_start(qtbot, app):
 
 
 def test_restore_state(qtbot, app):
-    filename = cf.config_folder / "gui_configs" / "Legex-3-axis-6-prbs.pkl"
+    filename = cf.base_folder / "config" / "gui_configs" / "Legex-3-axis-6-prbs.pkl"
     app.restore_filename(filename)
     assert app.machine.cmm_model.title == "Legex574"

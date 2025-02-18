@@ -1,6 +1,7 @@
 # from dataclasses import dataclass, field
 import datetime as dt
-import logging
+
+# import logging
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,7 @@ from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.data_cmpts as dc
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # =========== THEME===============
 # qdarktheme setup parameters

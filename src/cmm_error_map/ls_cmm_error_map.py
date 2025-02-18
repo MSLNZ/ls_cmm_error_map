@@ -4,7 +4,8 @@ main gui for cmm error map app
 """
 
 import datetime as dt
-import logging
+
+# import logging
 import pickle
 import sys
 from pathlib import Path
@@ -24,14 +25,14 @@ import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
-logging.basicConfig(
-    filename=cf.log_folder / "cmm_error_map.log",
-    encoding="utf-8",
-    filemode="w",
-    format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    level=logging.CRITICAL,
-)
+# logging.basicConfig(
+#     filename=cf.log_folder / "cmm_error_map.log",
+#     encoding="utf-8",
+#     filemode="w",
+#     format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
+#     datefmt="%Y-%m-%d %H:%M",
+#     level=logging.CRITICAL,
+# )
 
 DEBUG_BTN = False
 
@@ -775,10 +776,10 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        logging.debug("before restore")
+        # logging.debug("before restore")
         filename = cf.config_folder / "gui_configs" / "Legex-3-axis-6-prbs.pkl"
         self.restore_filename(filename)
-        logging.debug("after restore")
+        # logging.debug("after restore")
 
 
 def main():
@@ -787,11 +788,11 @@ def main():
     qdarktheme.setup_theme(**gc.main_theme)
 
     w = MainWindow()
-    logging.debug("MainWindow created")
+    # logging.debug("MainWindow created")
     w.setWindowIcon(pg.QtGui.QIcon(cf.fn_icon.as_posix()))
     w.showMaximized()
     w.show()
-    logging.debug("showing")
+    # logging.debug("showing")
 
     pg.exec()
 

@@ -6,14 +6,14 @@ import tomllib as toml
 import cmm_error_map.data_cmpts as dc
 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # this is for pyinstaller paths
 base_folder = Path(
     getattr(sys, "_MEIPASS", Path(__file__).parent.parent.parent.resolve())
 )
 
-logger.debug(f"{base_folder=}")
+# logger.debug(f"{base_folder=}")
 
 static_path = base_folder / "static"
 fn_icon = static_path / "icon.ico"
