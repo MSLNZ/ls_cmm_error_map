@@ -116,3 +116,35 @@ def test_matrix_from_3_points(test_pts):
     b0 = np.dot(v02_0, v03_0)
     b1 = np.dot(v02_1, v03_1)
     npt.assert_allclose(b0, b1, atol=abs_tol)
+
+
+"""
+gui_cmpts.matrix_from_vectors and gui_cmpts.matrix_to_vectors
+now use functions from scipy.spatial_transform
+so need little testing
+"""
+
+
+def test_matrix_to_vectors_vector_eq():
+    # reciprocal random test on vector equivalence
+    rng = np.random.default_rng()
+    vloc = rng.uniform(-600.0, 600.0, (3,))
+    # only tetsing narrow range because of angle equivalence problems
+    vrot = rng.uniform(-90, 90.0, (3,))
+    mat = dc.matrix_from_vectors(vloc, vrot)
+    vloc_calc, vrot_calc = dc.matrix_to_vectors(mat)
+    npt.assert_allclose(vloc, vloc_calc, atol=1e-12)
+    npt.assert_allclose(vrot, vrot_calc, atol=1e-12)
+
+
+def test_matrix_to_vectors_matrix_eq():
+    # reciprocal random test on matrix equivalence
+    rng = np.random.default_rng()
+    vloc = rng.uniform(-600.0, 600.0, (3,))
+    # test full range here
+    vrot = rng.uniform(-720, 720.0, (3,))
+    mat = dc.matrix_from_vectors(vloc, vrot)
+    vloc_calc, vrot_calc = dc.matrix_to_vectors(mat)
+    # go back to matrix
+    mat_calc = dc.matrix_from_vectors(vloc_calc, vrot_calc)
+    npt.assert_allclose(mat, mat_calc, atol=1e-12)
