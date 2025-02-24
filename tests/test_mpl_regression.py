@@ -11,7 +11,8 @@ import pytest
 
 import cmm_error_map.config as cf
 import cmm_error_map.data_cmpts as dc
-import cmm_error_map.mpl_2014.design_matrix_linear as design_old
+import cmm_error_map.mpl_2014.design_matrix_linear_tests as design_old
+
 
 # not much attention was paid to the sign of the parameters used in the old code
 # as the use of that code was to fit the parameters

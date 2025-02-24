@@ -668,6 +668,8 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.addDock(new_plot_dock, position="bottom")
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
+        new_plot_dock.pens = self.pens
+        new_plot_dock.update_pens()
 
     def recalculate(self):
         self.machine.recalculate()
@@ -694,7 +696,7 @@ class MainWindow(qtw.QMainWindow):
             filename = filename + ".pkl"
         state_dict = {}
         # state_dict["main_state"] = self.control_group.saveState(filter="user")
-        state_dict["main_state"] = self.control_group.saveState()
+        state_dict["main_state"] = self.control_group.saveState(filter="user")
         state_dict["counts"] = {
             "probes": len(self.prb_group.children()),
             "simulations": len(self.mmt_group.children()),

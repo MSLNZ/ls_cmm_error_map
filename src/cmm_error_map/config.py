@@ -18,6 +18,7 @@ base_folder = Path(
 static_path = base_folder / "static"
 fn_icon = static_path / "icon.ico"
 validation_path = base_folder / "tests" / "validation_data"
+test_configs_path = base_folder / "tests" / "gui_configs"
 
 # look for toml config files in
 # base_folder/config - ls_cmm_error_map/config or for pyinstaller  _internal/config

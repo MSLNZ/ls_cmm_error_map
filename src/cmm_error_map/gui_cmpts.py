@@ -850,6 +850,7 @@ class PlotBarDock(Dock):
 
         self.machine = machine
         self.dock_name = name
+        self.pens = {}
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
