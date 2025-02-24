@@ -853,6 +853,7 @@ class PlotBarDock(Dock):
 
         self.plot_data: dict[str, list[pg.PlotDataItem]] = {}
         self.plot_widget = pg.PlotWidget(name=name)
+        self.plot_widget.setYRange(0.0, 0.001)
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
@@ -892,6 +893,13 @@ class PlotBarDock(Dock):
                 limits.append(mmt.title)
         self.mmts_to_plot.setLimits(limits)
 
+    def update_pens(self):
+        for mmt_name, list_items in self.plot_data.items():
+            balls, lines = list_items
+            lines.setPen(self.pens[mmt_name])
+            balls.setSymbolPen(self.pens[mmt_name])
+            lines.setPen(self.pens[mmt_name])
+
     def change_plot_title(self, param):
         """
         event handler for a change in plot title
@@ -905,6 +913,7 @@ class PlotBarDock(Dock):
         """
         # check for deletions from machine.measurements
         # need two steps as can't delete dict item during iteration
+        self.update_pens()
         to_delete = []
         for mmt_name in self.plot_data:
             if mmt_name not in self.machine.measurements:

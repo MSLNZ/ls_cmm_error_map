@@ -760,7 +760,7 @@ class MainWindow(qtw.QMainWindow):
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
 
             elif dock_name[0] == "b":
-                self.add_new_plot_bar_dock(name=dock_name)
+                self.add_new_plot_bar_dock(None, name=dock_name)
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             elif dock_name[0] == "3":
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
