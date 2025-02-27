@@ -998,7 +998,7 @@ class FileSaveTree(qtw.QTreeWidget):
         self.root_folder = root_folder
         self.filenames = filenames
         root_item = qtw.QTreeWidgetItem(self, [self.root_folder.as_posix()])
-        folder = f"{folder_prefix}{dt.datetime.now().isoformat(sep='T')[:16]}"
+        folder = f"{folder_prefix}{dt.datetime.now().strftime('%Y%m%dT%H%M%S')}"
         self.folder_item = qtw.QTreeWidgetItem(root_item, [folder])
         self.folder_item.setFlags(self.folder_item.flags() | qtc.ItemIsEditable)
         self.file_items = {}
