@@ -34,3 +34,10 @@ packages = ["src/cmm_error_map"]
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.report]
+omit = [
+    "shibokensupport/*",
+    "pyscript",
+    "signature_bootstrap.py",
+]

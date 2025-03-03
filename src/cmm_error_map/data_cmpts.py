@@ -22,7 +22,7 @@ A **Probe** has
 
 import csv
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple, fields
 from pathlib import Path
 
 import numpy as np
@@ -101,6 +101,18 @@ class Probe:
     title: str
     name: str
     length: np.ndarray  # (3,)
+
+    def __eq__(self, other):
+        # required for testing
+        if self is other:
+            return True
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+        if self.title != other.title:
+            return False
+        if self.name != other.name:
+            return False
+        return np.allclose(self.length, other.length, atol=1e-8)
 
 
 # for drawing the box deformation
@@ -189,6 +201,27 @@ class Measurement:
             mmt_deform = cmm_to_plate_csy(self)
 
         self.mmt_dev = mmt_deform - self.mmt_nominal
+
+    def __eq__(self, other):
+        # required for testing, allows mmt1 == mmt2 to be evaluated
+        if self is other:
+            return True
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        equals = []
+        # only make a tuple at the Measurement class level
+        t1 = tuple(getattr(self, field.name) for field in fields(self))
+        t2 = tuple(getattr(other, field.name) for field in fields(other))
+        for a1, a2 in zip(t1, t2):
+            if type(a1) is not type(a2):
+                equals.append(False)
+            elif isinstance(a1, np.ndarray) and isinstance(a2, np.ndarray):
+                equals.append(np.allclose(a1, a2, atol=1e-5))
+            else:
+                # will use Probe.__eq__ etc.
+                equals.append(a1 == a2)
+        return all(equals)
 
 
 def matrix_from_vectors(vloc, vrot):
@@ -356,12 +389,13 @@ pmm_866 = Machine(
 # these could be methods of Measurement class
 
 
-def short_header(mmt: Measurement, now: dt.datetime):
+def short_header(mmt: Measurement, now: str):
     header = ""
     header += f"save time,{now}\n"
     header += f"title,{mmt.title}\n"
+    header += f"name,{mmt.name}\n"
     header += f"artefact.title,{mmt.artefact.title}\n"
-    header += f"artefact.nballs,{mmt.artefact.nballs[0]},{mmt.artefact.nballs[0]} \n"
+    header += f"artefact.nballs,{mmt.artefact.nballs[0]},{mmt.artefact.nballs[1]} \n"
     header += f"artefact.ball_spacing,{mmt.artefact.ball_spacing}\n"
     vloc, vrot = matrix_to_vectors(mmt.transform_mat)
     header += f"location,{vloc[0]}, {vloc[1]}, {vloc[2]}\n"
@@ -369,7 +403,7 @@ def short_header(mmt: Measurement, now: dt.datetime):
     return header
 
 
-def mmt_snapshot_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
+def mmt_snapshot_to_csv(fp: Path, mmt: Measurement, now: str):
     """
     the minimum data to save for reimporting
     """
@@ -382,7 +416,7 @@ def mmt_snapshot_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
         np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 3)
 
 
-def mmt_full_data_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
+def mmt_full_data_to_csv(fp: Path, mmt: Measurement, now: str):
     """
     simulation in cmm and artefact csy
     """
@@ -401,7 +435,7 @@ def mmt_full_data_to_csv(fp: Path, mmt: Measurement, now: dt.datetime):
         np.savetxt(fp, np_out.T, delimiter=",", fmt=["%d"] + ["%.5f"] * 12)
 
 
-def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine, now: dt.datetime):
+def mmt_metadata_to_csv(fp: Path, mmt: Measurement, machine: Machine, now: str):
     """
     file with model parameters etc
     """
@@ -442,7 +476,7 @@ def mmt_from_snapshot_csv(fn: Path) -> Measurement:
     mmtxyz = np.array(mmtxyz).T
     artefact = ArtefactType(
         title=ss_dict["artefact.title"][0],
-        nballs=(int(ss_dict["artefact.nballs"][0]), int(ss_dict["artefact.nballs"][1])),
+        nballs=[int(ss_dict["artefact.nballs"][0]), int(ss_dict["artefact.nballs"][1])],
         ball_spacing=float(ss_dict["artefact.ball_spacing"][0]),
     )
 
@@ -467,7 +501,7 @@ def mmt_from_snapshot_csv(fn: Path) -> Measurement:
 
     mmt = Measurement(
         title=ss_dict["title"][0],
-        name="mmt_00",
+        name=ss_dict["name"][0],
         artefact=artefact,
         transform_mat=np.identity(4),
         probe=p0,

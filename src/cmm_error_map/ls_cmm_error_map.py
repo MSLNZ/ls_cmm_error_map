@@ -4,7 +4,8 @@ main gui for cmm error map app
 """
 
 import datetime as dt
-import logging
+
+# import logging
 import pickle
 import sys
 from pathlib import Path
@@ -24,14 +25,14 @@ import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
-logging.basicConfig(
-    # filename=cf.log_folder / "cmm_error_map.log",
-    encoding="utf-8",
-    filemode="w",
-    format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
-    datefmt="%Y-%m-%d %H:%M",
-    level=logging.CRITICAL,
-)
+# logging.basicConfig(
+#     filename=cf.log_folder / "cmm_error_map.log",
+#     encoding="utf-8",
+#     filemode="w",
+#     format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
+#     datefmt="%Y-%m-%d %H:%M",
+#     level=logging.CRITICAL,
+# )
 
 DEBUG_BTN = False
 
@@ -44,12 +45,14 @@ class MainWindow(qtw.QMainWindow):
         self.nprbs = 0
         self.nmmts = 0
         self.pens = {}
-        self.freeze_gui = False
         self.poly_txts = {}
         self.plot_docks = {}
         self.plot3d_dock = None
+        self.freeze_gui = False
         self.setup_gui()
         self.add_startup_docks()
+        self.freeze_gui = False
+        self.update_machine()
 
     def setup_gui(self):
         self.dock_area = DockArea()
@@ -69,12 +72,12 @@ class MainWindow(qtw.QMainWindow):
 
         # other controls
         btn_plot2d = self.control_group.addChild(
-            dict(type="action", name="btn_plot2d", title="Add Plate Plot Dock")
+            dict(type="action", name="btn_plot2d", title="Add Plate Plot")
         )
         btn_plot2d.sigActivated.connect(self.add_new_plot_plate_dock)
 
         btn_plot1d = self.control_group.addChild(
-            dict(type="action", name="btn_plot1d", title="Add Bar Plot Dock")
+            dict(type="action", name="btn_plot1d", title="Add Bar Plot")
         )
         btn_plot1d.sigActivated.connect(self.add_new_plot_bar_dock)
 
@@ -434,13 +437,18 @@ class MainWindow(qtw.QMainWindow):
         recreates self.machine.measurements from gui controls in self.mmt_group
         recalculates all measurement data via replot-> recalculate - optimize later if needed
         """
-
-        # keep the snapshots
         if self.freeze_gui:
             return
+        # keep the snapshots
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
         }
+        # update the pens for the snapshots
+        if hasattr(self, "snapshot_group"):
+            for mmt_child in self.snapshot_group.children():
+                mmt_name = mmt_child.name()
+                self.pens[mmt_name] = mmt_child.child("pen").pen
+
         # recreate the simulations from gui
         for mmt_child in self.mmt_group.children():
             mmt_name = mmt_child.name()
@@ -508,27 +516,29 @@ class MainWindow(qtw.QMainWindow):
         dialog = gc.SaveSimulationDialog()
         if dialog.exec() == qtw.QDialog.Accepted:
             now = dt.datetime.now().isoformat(sep=" ")
-            fns = dialog.filenames
-            # create folder
-            fns["snapshot"].parent.mkdir(parents=True, exist_ok=True)
-            dc.mmt_snapshot_to_csv(fns["snapshot"], mmt, now)
-            dc.mmt_full_data_to_csv(fns["fulldata"], mmt, now)
-            dc.mmt_metadata_to_csv(fns["metadata"], mmt, self.machine, now)
-            # readme
-            pre_text = f"Created at: {now}\n"
-            pre_text += f"CMM Error Map Software Version: {__version__}\n"
-            exe_fn = Path(sys.executable)
-            if exe_fn.name != "python.exe":
-                # run from exe created with pyinstaller etc.
-                pre_text += f"exe file: {exe_fn.resolve()} \n"
-                pre_text += f"{dt.datetime.fromtimestamp(exe_fn.stat().st_ctime)}\n"
+            self.save_snapshot_to_folder(mmt, dialog.filenames, now, dialog.readme_text)
 
-            with open(fns["readme"], "w") as fp:
-                fp.write(pre_text)
-                fp.write("\n\n")
-                fp.write(dialog.readme_text)
+    def save_snapshot_to_folder(self, mmt, fns, now, readme_text):
+        # create folder
+        fns["snapshot"].parent.mkdir(parents=True, exist_ok=True)
+        dc.mmt_snapshot_to_csv(fns["snapshot"], mmt, now)
+        dc.mmt_full_data_to_csv(fns["fulldata"], mmt, now)
+        dc.mmt_metadata_to_csv(fns["metadata"], mmt, self.machine, now)
+        # readme
+        pre_text = f"Created at: {now}\n"
+        pre_text += f"CMM Error Map Software Version: {__version__}\n"
+        exe_fn = Path(sys.executable)
+        if exe_fn.name != "python.exe":
+            # run from exe created with pyinstaller etc.
+            pre_text += f"exe file: {exe_fn.resolve()} \n"
+            pre_text += f"{dt.datetime.fromtimestamp(exe_fn.stat().st_ctime)}\n"
 
-    def make_snapshot_controls(self) -> Parameter:
+        with open(fns["readme"], "w") as fp:
+            fp.write(pre_text)
+            fp.write("\n\n")
+            fp.write(readme_text)
+
+    def make_snapshot_controls(self):
         self.snapshot_group = Parameter.create(
             type="group",
             title="Snapshots",
@@ -536,12 +546,15 @@ class MainWindow(qtw.QMainWindow):
             addText="Load from CSV",
         )
         self.snapshot_group.sigAddNew.connect(self.load_snapshot)
+        self.snapshot_group.sigTreeStateChanged.connect(self.update_measurements)
 
     def load_snapshot(self):
         filename, _ = qtw.QFileDialog.getOpenFileName(self, filter="CSV Files (*.csv)")
         if not filename:
             return
+        self.load_snapshot_from_file(filename)
 
+    def load_snapshot_from_file(self, filename):
         mmt = dc.mmt_from_snapshot_csv(Path(filename))
         mmt_name = f"snapshot_grp{len(self.snapshot_group.children())}"
         self.add_new_snapshot_group(mmt)
@@ -555,7 +568,7 @@ class MainWindow(qtw.QMainWindow):
         self.replot()
 
     def add_new_snapshot_group(self, mmt):
-        # a snapshot is just a immutable measurement
+        # a snapshot is just a immutable measurement/simulationn
         grp_params = gc.mmt_control_grp.copy()
         grp_params["name"] = "snapshot_grp0"
         grp_params["context"] = ["Delete"]
@@ -667,6 +680,8 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.addDock(new_plot_dock, position="bottom")
         _containers, self.plot_docks = self.dock_area.findAll()
         new_plot_dock.replot()
+        new_plot_dock.pens = self.pens
+        new_plot_dock.update_pens()
 
     def recalculate(self):
         self.machine.recalculate()
@@ -689,11 +704,13 @@ class MainWindow(qtw.QMainWindow):
 
         if not filename:
             return
+        self.save_state_to_file(filename)
+
+    def save_state_to_file(self, filename):
         if Path(filename).suffix == "":
             filename = filename + ".pkl"
         state_dict = {}
-        # state_dict["main_state"] = self.control_group.saveState(filter="user")
-        state_dict["main_state"] = self.control_group.saveState()
+        state_dict["main_state"] = self.control_group.saveState(filter="user")
         state_dict["counts"] = {
             "probes": len(self.prb_group.children()),
             "simulations": len(self.mmt_group.children()),
@@ -712,15 +729,15 @@ class MainWindow(qtw.QMainWindow):
             pickle.dump(state_dict, fp)
 
     def restore_state(self):
-        self.freeze_gui = True
         filename, _ = qtw.QFileDialog.getOpenFileName(
             self, filter="config files (*.pkl)"
         )
         if not filename:
             return
-        self.restore_filename(filename)
+        self.restore_state_from_file(filename)
 
-    def restore_filename(self, filename):
+    def restore_state_from_file(self, filename):
+        self.freeze_gui = True
         with open(filename, "rb") as fp:
             state_dict = pickle.load(fp)
 
@@ -739,11 +756,14 @@ class MainWindow(qtw.QMainWindow):
             self.add_new_probe_group(self.prb_group)
         for i in range(state_dict["counts"]["simulations"]):
             self.add_new_mmt_group(self.mmt_group)
-        for i in range(state_dict["counts"]["snapshots"]):
-            self.add_new_snapshot_group(self.snapshot_group)
+
+        # don't put any snapshots back as we haven't saved the data
 
         # restore state of main control panel
-        self.control_group.restoreState(state_dict["main_state"])
+        for group in ["machine", "probes_group", "mmt_group"]:
+            self.control_group.child(group).restoreState(
+                state_dict["main_state"]["children"][group]
+            )
 
         # remove any existing docks
 
@@ -759,7 +779,7 @@ class MainWindow(qtw.QMainWindow):
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
 
             elif dock_name[0] == "b":
-                self.add_new_plot_bar_dock(name=dock_name)
+                self.add_new_plot_bar_dock(None, name=dock_name)
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             elif dock_name[0] == "3":
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
@@ -775,10 +795,7 @@ class MainWindow(qtw.QMainWindow):
         print useful stuff here
         or add to  summary etc.
         """
-        logging.debug("before restore")
-        filename = cf.config_folder / "gui_configs" / "Legex-3-axis-6-prbs.pkl"
-        self.restore_filename(filename)
-        logging.debug("after restore")
+        print(f"{self.plot_docks['3D Deformation'].mmts_to_plot.value()=}")
 
 
 def main():
@@ -787,11 +804,11 @@ def main():
     qdarktheme.setup_theme(**gc.main_theme)
 
     w = MainWindow()
-    logging.debug("MainWindow created")
+    # logging.debug("MainWindow created")
     w.setWindowIcon(pg.QtGui.QIcon(cf.fn_icon.as_posix()))
     w.showMaximized()
     w.show()
-    logging.debug("showing")
+    # logging.debug("showing")
 
     pg.exec()
 

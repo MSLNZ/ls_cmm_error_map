@@ -1,0 +1,37 @@
+save time,2025-02-19 14:23:58.890420
+title,Plate XZ
+name,mmt_01
+artefact.title,KOBA 0620
+artefact.nballs,5,5 
+artefact.ball_spacing,133.0
+location,250.0, 316.0, 50.0
+rotation/deg,89.99999999999999, 0.0, 0.0
+cmm_model.title,PMM866
+cmm_model.size,800,600,600
+cmm_model.fixed_table,False
+cmm_model.bridge_axis,1
+probe.title,P0
+probe.name,p0
+probe.length,0.0,130.0,-243.4852
+model parameters
+Txx,[0.0, 0.0]
+Txy,[0.0, 0.0]
+Txz,[0.0, 0.0]
+Tyx,[0.0, 0.0]
+Tyy,[0.0, 0.0]
+Tyz,[0.0, 0.0]
+Tzx,[0.0, 0.0]
+Tzy,[0.0, 0.0]
+Tzz,[0.0, 0.0]
+Rxx,[0.0, 0.0]
+Rxy,[0.0, 0.0]
+Rxz,[0.0, 0.0]
+Ryx,[0.0, 0.0]
+Ryy,[0.0, 0.0]
+Ryz,[0.0, 0.0]
+Rzx,[0.0, 0.0]
+Rzy,[0.0, 0.0]
+Rzz,[0.0, 0.0]
+Wxy,[0.0, 0.0]
+Wxz,[0.0, 0.0]
+Wyz,[0.0, 0.0]

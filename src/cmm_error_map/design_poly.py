@@ -7,12 +7,12 @@ only simplification is angle approximation in matrices
 allow the input to be a `numpy.Polynomial` object
 """
 
-import logging
+# import logging
 
 import numpy as np
 from numpy.polynomial import Polynomial
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def evaluate_polynomials(

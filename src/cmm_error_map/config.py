@@ -1,4 +1,5 @@
 import sys
+import sys
 from pathlib import Path
 import logging
 import tomllib as toml
@@ -6,17 +7,19 @@ import tomllib as toml
 import cmm_error_map.data_cmpts as dc
 
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # this is for pyinstaller paths
 base_folder = Path(
     getattr(sys, "_MEIPASS", Path(__file__).parent.parent.parent.resolve())
 )
 
-logger.debug(f"{base_folder=}")
+# logger.debug(f"{base_folder=}")
 
 static_path = base_folder / "static"
 fn_icon = static_path / "icon.ico"
+validation_path = base_folder / "tests" / "validation_data"
+test_configs_path = base_folder / "tests" / "gui_configs"
 
 # look for toml config files in
 # base_folder/config - ls_cmm_error_map/config or for pyinstaller  _internal/config
