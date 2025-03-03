@@ -69,7 +69,7 @@ def test_mmt_snapshot_to_csv(single_mmt, tmp_path_factory):
 
     with open(fp_test, "r") as f:
         actual_lines = f.readlines()
-    with open(cf.validation_path / "snapshot.csv", "r") as f:
+    with open(cf.validation_path / "plate" / "snapshot.csv", "r") as f:
         expected_lines = f.readlines()
     assert actual_lines == expected_lines
 
@@ -83,7 +83,7 @@ def test_mmt_full_data_to_csv(single_mmt, tmp_path_factory):
 
     with open(fp_test, "r") as f:
         actual_lines = f.readlines()
-    with open(cf.validation_path / "fulldata.csv", "r") as f:
+    with open(cf.validation_path / "plate" / "fulldata.csv", "r") as f:
         expected_lines = f.readlines()
     assert actual_lines == expected_lines
 
@@ -97,12 +97,12 @@ def test_mmt_metadata_to_csv(single_mmt, tmp_path_factory):
     assert fp_test.exists()
     with open(fp_test, "r") as f:
         actual_lines = f.readlines()
-    with open(cf.validation_path / "metadata.csv", "r") as f:
+    with open(cf.validation_path / "plate" / "metadata.csv", "r") as f:
         expected_lines = f.readlines()
     assert actual_lines == expected_lines
 
 
-def test_mmt_from_snapshot_csv(single_mmt, tmp_path_factory):
+def test_mmt_from_snapshot_csv_plate(single_mmt, tmp_path_factory):
     fp_test = tmp_path_factory.mktemp("snapshot") / "snapshot.csv"
     now = "2025-02-19 14:23:58.890420"
     dc.mmt_snapshot_to_csv(fp_test, single_mmt, now)
@@ -116,6 +116,12 @@ def test_mmt_from_snapshot_csv(single_mmt, tmp_path_factory):
     mmt_cmp.fixed = True
 
     assert mmt_fp == mmt_cmp
+
+
+def test_mmt_from_snapshot_csv_bar():
+    filename = cf.validation_path / "bar" / "snapshot.csv"
+    mmt = dc.mmt_from_snapshot_csv(filename)
+    npt.assert_allclose(mmt.mmt_dev[:, -1], np.array([0.00072, 0.0, 0.0]), atol=1e-6)
 
     """
     seeing we've written Measurement.__eq__

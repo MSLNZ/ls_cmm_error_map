@@ -121,7 +121,7 @@ def test_save_snapshot(qtbot, app, tmp_path):
 
 
 def test_load_snapshot(qtbot, app):
-    filename = cf.validation_path / "snapshot.csv"
+    filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     assert len(app.snapshot_group.children()) == 1
     # check we can plot snapshot in 3D
@@ -135,7 +135,7 @@ def test_restore_state_with_snapshot(qtbot, app, tmp_path):
     file_in = cf.test_configs_path / "Legex-XY-2-prbs.pkl"
     app.restore_state_from_file(file_in)
     # add a snaphot to it
-    file_snap = cf.validation_path / "snapshot.csv"
+    file_snap = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(file_snap)
     # save this state
     file_out = tmp_path / "test_state_snapshot.pkl"
@@ -150,7 +150,7 @@ def test_restore_state_with_snapshot(qtbot, app, tmp_path):
 
 
 def test_plot_snapshot_plate(qtbot, app):
-    filename = cf.validation_path / "snapshot.csv"
+    filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     # check we can plot snapshot in 2D
     app.add_new_plot_plate_dock(None)
@@ -160,7 +160,7 @@ def test_plot_snapshot_plate(qtbot, app):
 
 
 def test_snapshot_fixed(qtbot, app):
-    filename = cf.validation_path / "snapshot.csv"
+    filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     app.add_new_plot_plate_dock(None)
     app.plot_docks["plate0"].mmts_to_plot.setValue(["Simulation 0", "Plate XZ"])

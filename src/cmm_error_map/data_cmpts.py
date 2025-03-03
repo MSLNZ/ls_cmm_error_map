@@ -395,7 +395,7 @@ def short_header(mmt: Measurement, now: str):
     header += f"title,{mmt.title}\n"
     header += f"name,{mmt.name}\n"
     header += f"artefact.title,{mmt.artefact.title}\n"
-    header += f"artefact.nballs,{mmt.artefact.nballs[0]},{mmt.artefact.nballs[0]} \n"
+    header += f"artefact.nballs,{mmt.artefact.nballs[0]},{mmt.artefact.nballs[1]} \n"
     header += f"artefact.ball_spacing,{mmt.artefact.ball_spacing}\n"
     vloc, vrot = matrix_to_vectors(mmt.transform_mat)
     header += f"location,{vloc[0]}, {vloc[1]}, {vloc[2]}\n"

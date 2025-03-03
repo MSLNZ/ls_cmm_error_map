@@ -72,12 +72,12 @@ class MainWindow(qtw.QMainWindow):
 
         # other controls
         btn_plot2d = self.control_group.addChild(
-            dict(type="action", name="btn_plot2d", title="Add Plate Plot Dock")
+            dict(type="action", name="btn_plot2d", title="Add Plate Plot")
         )
         btn_plot2d.sigActivated.connect(self.add_new_plot_plate_dock)
 
         btn_plot1d = self.control_group.addChild(
-            dict(type="action", name="btn_plot1d", title="Add Bar Plot Dock")
+            dict(type="action", name="btn_plot1d", title="Add Bar Plot")
         )
         btn_plot1d.sigActivated.connect(self.add_new_plot_bar_dock)
 
