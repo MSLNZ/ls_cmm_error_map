@@ -37,3 +37,11 @@ nballs = [
     8,
 ]
 ball_spacing = 50.0
+
+["Gauge Blocks 350"]
+title = "Gauge Blocks 350"
+nballs = [
+    8,
+    1,
+]
+ball_spacing = 50.0
