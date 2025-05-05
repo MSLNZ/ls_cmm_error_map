@@ -1,5 +1,5 @@
 import sys
-import sys
+
 from pathlib import Path
 import logging
 import tomllib as toml
@@ -22,13 +22,15 @@ validation_path = base_folder / "tests" / "validation_data"
 test_configs_path = base_folder / "tests" / "gui_configs"
 
 # look for toml config files in
-# base_folder/config - ls_cmm_error_map/config or for pyinstaller  _internal/config
+# base_folder/src/cmm_error_map/config - ls_cmm_error_map/config or for pyinstaller  _internal/config
 # base_folder
 # base_folder.parent - pyinstaller alongside exe
 
+toml_path = base_folder / "src" / "cmm_error_map" / "config"
+
 machines_tomls = []
 artefacts_tomls = []
-for folder in [base_folder / "config", base_folder, base_folder.parent]:
+for folder in [toml_path, base_folder, base_folder.parent]:
     if (folder / "machines.toml").exists():
         machines_tomls.append(folder / "machines.toml")
     if (folder / "artefacts.toml").exists():
