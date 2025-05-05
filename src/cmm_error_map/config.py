@@ -14,6 +14,7 @@ base_folder = Path(
     getattr(sys, "_MEIPASS", Path(__file__).parent.parent.parent.resolve())
 )
 
+toml_folder = Path(getattr(sys, "_MEIPASS", Path(__file__).parent.resolve())) / "config"
 # logger.debug(f"{base_folder=}")
 
 static_path = base_folder / "static"
@@ -26,11 +27,10 @@ test_configs_path = base_folder / "tests" / "gui_configs"
 # base_folder
 # base_folder.parent - pyinstaller alongside exe
 
-toml_path = base_folder / "src" / "cmm_error_map" / "config"
 
 machines_tomls = []
 artefacts_tomls = []
-for folder in [toml_path, base_folder, base_folder.parent]:
+for folder in [toml_folder, base_folder, base_folder.parent]:
     if (folder / "machines.toml").exists():
         machines_tomls.append(folder / "machines.toml")
     if (folder / "artefacts.toml").exists():
