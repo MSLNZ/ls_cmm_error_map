@@ -90,6 +90,13 @@ class MainWindow(qtw.QMainWindow):
         )
         btn_restore_state.sigActivated.connect(self.restore_state)
 
+        btn_default_state = self.control_group.addChild(
+            dict(type="action", name="btn_default_state", title="Clear All")
+        )
+        btn_default_state.sigActivated.connect(
+            lambda: self.restore_state_from_file(filename=cf.default_config_fn)
+        )
+
         # button for debug purposes
         if DEBUG_BTN:
             btn_debug = self.control_group.addChild(
@@ -204,6 +211,7 @@ class MainWindow(qtw.QMainWindow):
         squareness = self.slider_group.addChild(
             dict(type="group", title="Squareness", name="squareness", expanded=False)
         )
+
         self.slider_axes = [x_axis, y_axis, z_axis, squareness]
 
         for key, axis in gc.axis_group.items():
@@ -230,6 +238,8 @@ class MainWindow(qtw.QMainWindow):
             )
             poly_txt.show(False)
             self.poly_txts[key] = poly_txt
+            # hide the squareness terms from the user
+            self.slider_axes[3].hide()
 
         self.slider_group.addChild(
             dict(type="action", name="btn_reset_all", title="Reset Model")
