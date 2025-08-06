@@ -34,13 +34,13 @@ from cmm_error_map import __version__
 #     level=logging.CRITICAL,
 # )
 
-DEBUG_BTN = False
+DEBUG_BTN = True
 
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
-        self.machine = dc.pmm_866
+        self.machine = dc.legex574
         self.cmm_models = cf.cmm_models
         self.nprbs = 0
         self.nmmts = 0
@@ -50,7 +50,6 @@ class MainWindow(qtw.QMainWindow):
         self.plot3d_dock = None
         self.freeze_gui = False
         self.setup_gui()
-        self.add_startup_docks()
         self.freeze_gui = False
         self.update_machine()
 
@@ -129,6 +128,8 @@ class MainWindow(qtw.QMainWindow):
         widget.setLayout(layout1)
         self.setCentralWidget(widget)
         self.extra_styling()
+
+        self.restore_state_from_file(cf.default_config_fn)
 
     def extra_styling(self):
         """
@@ -443,11 +444,6 @@ class MainWindow(qtw.QMainWindow):
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed
         }
-        # update the pens for the snapshots
-        if hasattr(self, "snapshot_group"):
-            for mmt_child in self.snapshot_group.children():
-                mmt_name = mmt_child.name()
-                self.pens[mmt_name] = mmt_child.child("pen").pen
 
         # recreate the simulations from gui
         for mmt_child in self.mmt_group.children():
@@ -474,6 +470,23 @@ class MainWindow(qtw.QMainWindow):
                 mmt_dev=None,
             )
             self.machine.measurements[mmt_name] = mmt
+
+        self.update_pens()
+        self.replot()
+
+    def update_pens(self):
+        """
+        recreate self.pens from current gui state
+        """
+        self.pens = {}
+        # update the pens for the snapshots
+        if hasattr(self, "snapshot_group"):
+            for mmt_child in self.snapshot_group.children():
+                mmt_name = mmt_child.name()
+                self.pens[mmt_name] = mmt_child.child("pen").pen
+
+        for mmt_child in self.mmt_group.children():
+            mmt_name = mmt_child.name()
             self.pens[mmt_name] = mmt_child.child("pen").pen
 
         _containers, self.plot_docks = self.dock_area.findAll()
@@ -482,8 +495,6 @@ class MainWindow(qtw.QMainWindow):
             dock.update_pens()
             dock.update_measurement_list()
         self.set_mmt_colors()
-
-        self.replot()
 
     def set_mmt_colors(self):
         for mmt_child in self.mmt_group.children():
@@ -640,13 +651,14 @@ class MainWindow(qtw.QMainWindow):
         param.parent().setOpts(title=param.value())
         self.update_measurements()
 
-    def add_startup_docks(self):
+    def add_3d_dock(self):
         """
         add the 3d plot dock
         """
         self.plot3d_dock = gc.Plot3dDock("3D Deformation", self.machine)
         self.dock_area.addDock(self.plot3d_dock)
-        self.update_measurements()
+        _containers, self.plot_docks = self.dock_area.findAll()
+        self.update_pens()
 
     def add_new_plot_plate_dock(self, _parameter, name=None):
         """
@@ -768,9 +780,11 @@ class MainWindow(qtw.QMainWindow):
         # remove any existing docks
 
         for dock in self.plot_docks.values():
-            if dock.dock_name != "3D Deformation":
-                dock.close()
-                del dock
+            # if dock.dock_name != "3D Deformation":
+            dock.close()
+            del dock
+
+        self.update_pens()
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock_name, dock_state in state_dict["docks"].items():
@@ -782,6 +796,7 @@ class MainWindow(qtw.QMainWindow):
                 self.add_new_plot_bar_dock(None, name=dock_name)
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             elif dock_name[0] == "3":
+                self.add_3d_dock()
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
             else:
                 raise ValueError("Unknown dock type")

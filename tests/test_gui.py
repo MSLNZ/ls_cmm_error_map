@@ -3,13 +3,14 @@ some very simple gui tests via pytest-qt
 """
 
 import pickle
-import pytest
+
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 import cmm_error_map.config as cf
-from cmm_error_map.ls_cmm_error_map import MainWindow
 import cmm_error_map.gui_cmpts as gc
+from cmm_error_map.ls_cmm_error_map import MainWindow
 
 
 @pytest.fixture
@@ -177,3 +178,47 @@ def test_snapshot_fixed(qtbot, app):
     npt.assert_allclose(snap_data0, snap_data1, atol=1e-6)
     # check the  simulation did change
     assert np.any(np.not_equal(mmt_data0, mmt_data1))
+
+
+def test_simple_save_restore(qtbot, app, tmp_path):
+    """
+    this was giving errors when done manually - now passes
+    """
+    # set Probe0 z-length to -250
+    app.prb_group.child("prb_control_grp0", "grp_probe_lengths", "Z").setValue(-250.0)
+    # centre plate and set z position to 50 mm
+    item = app.mmt_group.child("mmt_control_grp0", "grp_location", "centre")
+    app.centre_on_cmm(item)
+    app.mmt_group.child("mmt_control_grp0", "grp_location", "Z").setValue(50.0)
+    # select Simulation 0 in 3D dock
+    app.plot_docks["3D Deformation"].plot_controls.child("mmts_to_plot").setValue(
+        "Simulation 0"
+    )
+    # add plate plot and select Simulation 0
+    # name must begin with p
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").setValue(
+        "Simulation 0"
+    )
+    # add some Rxz deformation
+    app.slider_group.child("x_axis", "Rxz").setValue(3.0)
+    assert app.mmt_group.child(
+        "mmt_control_grp0", "pen", "color"
+    ).value().toTuple() == (200, 200, 200, 255)
+    # change the color
+    app.mmt_group.child("mmt_control_grp0", "pen").setOpts(color="blue")
+    assert app.mmt_group.child(
+        "mmt_control_grp0", "pen", "color"
+    ).value().toTuple() == (0, 0, 255, 255)
+
+    # save config
+    file_out = tmp_path / "test.pkl"
+    app.save_state_to_file(file_out)
+    # restore default
+    app.restore_state_from_file(cf.test_configs_path / "default_config.pkl")
+    assert app.mmt_group.child(
+        "mmt_control_grp0", "pen", "color"
+    ).value().toTuple() == (200, 200, 200, 255)
+
+    # restore saved state
+    app.restore_state_from_file(file_out)

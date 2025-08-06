@@ -1,11 +1,9 @@
 import sys
-
 from pathlib import Path
-import logging
+
 import tomllib as toml
 
 import cmm_error_map.data_cmpts as dc
-
 
 # logger = logging.getLogger(__name__)
 
@@ -23,7 +21,7 @@ validation_path = base_folder / "tests" / "validation_data"
 test_configs_path = base_folder / "tests" / "gui_configs"
 
 # look for toml config files in
-# base_folder/src/cmm_error_map/config - ls_cmm_error_map/config or for pyinstaller  _internal/config
+# base_folder/src/cmm_error_map/config - ls_cmm_error_map/src/config or for pyinstaller  _internal/config
 # base_folder
 # base_folder.parent - pyinstaller alongside exe
 
@@ -38,6 +36,22 @@ for folder in [toml_folder, base_folder, base_folder.parent]:
 
 
 # log_folder = base_folder / "logs"
+
+# look for "default_config.pkl" in
+# 1. base_folder/src/cmm_error_map/config/gui_configs - ls_cmm_error_map/src/config or for pyinstaller  _internal/config
+# 2. base_folder
+# 3. base_folder.parent - pyinstaller alongside exe
+# if 3. exists it is used else 2 else 1
+_config_fn = "default_config.pkl"
+default_config_fn = toml_folder / "gui_configs" / _config_fn
+
+for fn in [
+    base_folder.parent / _config_fn,
+    base_folder / _config_fn,
+]:
+    if fn.exists():
+        default_config_fn = fn
+        break
 
 
 def read_toml(fn, input_type):
