@@ -9,6 +9,7 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import pyqtgraph.Qt.QtGui as qtg
 import pyqtgraph.Qt.QtWidgets as qtw
+from numpy.polynomial import Polynomial
 from pyqtgraph.dockarea.Dock import Dock, DockLabel
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
@@ -408,7 +409,6 @@ def update_plot3d_box(gridlines: gl.GLLinePlotItem, box: dc.BoxGrid, mag):
     """
     update a plot produced by plot3d_box with a new set of params
     """
-
     ind = grid_line_index(box.npts)
     pts = box.grid_nominal[:, ind] + mag * box.grid_dev[:, ind]
     gridlines.setData(pos=pts.T)
@@ -608,6 +608,7 @@ class Plot3dDock(Dock):
         """
         redraws the 3d box deformation plot from data in self.machine.measurements
         """
+
         box = self.machine.boxes[self.probe_box.value()]
         if self.box_lineplot is None:
             # haven't plotted the box deformation yet or machine changed
@@ -1124,3 +1125,125 @@ class CustomDockLabel(DockLabel):
 
             }""" % (bg, fg, r, r, border, self.fontSize)
             self.setStyleSheet(self.hStyle)
+
+
+class PolySliderGroup(Parameter):
+    """
+    class to combine a slider with ability to display polynomial equation and edit polynomial coefficients
+    """
+
+    def __init__(
+        self, key: str, slider_factor: float, axis: str = "x", axis_max: float = 600.0
+    ):
+        super().__init__(type="group", title=key, name=f"sg_{key}")
+        self.key = key
+        self.slider_factor = slider_factor
+        self.axis = axis
+        self.axis_max = axis_max
+        self.points = False
+        self.polynomial = Polynomial(
+            np.array([0.0, 1.0]), symbol=axis, domain=[0, axis_max]
+        )
+        self.coefficients = np.array([0.0, 0.0])
+        self.show_poly = False
+        self.setName(key)
+        self.setValue(0)
+
+        self.slider = self.addChild(
+            dict(
+                type="slider",
+                name=f"{key}_slider",
+                title="",
+                limits=[-5.0, 5.0],
+                step=0.1,
+                value=0,
+                default=0,
+            ),
+        )
+        self.coeffs_txt = self.addChild(
+            dict(
+                type="str",
+                name=f"{key}_poly",
+                title="    poly",
+                value="0.0, 1.0",
+                default="0.0, 1.0",
+            ),
+        )
+        self.coeffs_txt.show(False)
+        self.slider.sigValueChanged.connect(self.update)
+        self.coeffs_txt.sigValueChanged.connect(self.update)
+        self.reset()
+
+    def reset(self):
+        """
+        reset slider to zero
+        coeffs to linear default
+        """
+        self.slider.setValue(0.0)
+        self.coeffs_txt.setValue("0.0, 1.0")
+
+        # calling update will also reset
+        # self.coefficients
+        # self.value
+        # self.polynomial
+
+        self.update()
+
+    def update(self):
+        self.poly_str_to_polynomial(self.coeffs_txt.value())
+        self.setValue(self.slider.value())
+        self.coefficients = (
+            self.polynomial.coef * self.slider.value() * self.slider_factor
+        )
+        if self.show_poly:
+            with np.printoptions(precision=1):
+                pstr = f"{self.polynomial}"
+            self.setOpts(
+                title=f"{self.key} = ({self.slider.value():.1f})·({pstr})·({self.slider_factor:.0e})"
+            )
+        else:
+            self.setOpts(title=f"{self.key}")
+
+    def show_equation(self, on):
+        self.show_poly = on
+        self.coeffs_txt.show(on)
+        self.update()
+
+    def poly_str_to_polynomial(self, text: str) -> Polynomial:
+        """
+        take gui poly field input and return Polynomial
+        """
+        try:
+            coeffs = [float(c) for c in text.split(",")]
+            coeffs = np.array(coeffs)
+        except ValueError:
+            coeffs = np.array([0.0, 1.0])
+            self.coeffs_txt.setValue("0.0, 1.0")
+        if self.points:
+            # return a polynomial that passes through given points equally spaced along axis
+            x = np.linspace(0, self.axis_max, len(coeffs))
+            self.polynomial = Polynomial.fit(
+                x,
+                coeffs,
+                deg=len(coeffs),
+                symbol=self.axis,
+                domain=[0, self.axis_max],
+                window=[0, self.axis_max],
+            )
+            # with np.printoptions(precision=1, suppress=True):
+            #     print(f"{self.polynomial}")
+        else:
+            self.polynomial = Polynomial(
+                coeffs,
+                symbol=self.axis,
+                domain=[0, self.axis_max],
+                window=[0, self.axis_max],
+            )
+
+    def set_points(self, on: bool):
+        self.points = on
+        if on:
+            self.coeffs_txt.setOpts(title=f"{self.key}_points")
+        else:
+            self.coeffs_txt.setOpts(title=f"{self.key}_poly")
+        self.update_txt()

@@ -23,7 +23,7 @@ def app(qtbot):
 
 
 def test_app_start(qtbot, app):
-    assert app.machine.cmm_model.title == "PMM866"
+    assert app.machine.cmm_model.title == "Legex574"
 
 
 def test_restore_state_plate(qtbot, app):
@@ -51,14 +51,27 @@ def test_save_state(qtbot, app, tmp_path):
 
 
 def test_set_model_slider(qtbot, app):
-    app.slider_group.child("x_axis", "Rxz").setValue(3.0)
+    # check the points are nominal before setting the slider
+    # this just has the box points
+    assert app.machine.boxes["prb_control_grp0"].grid_dev.shape == (3, 240)
+    box_dev0 = app.machine.boxes["prb_control_grp0"].grid_dev[1, -1]
+    assert pytest.approx(box_dev0, 0.001) == 0.0
+    # this has all the connecting lines for the deformed box
+    assert app.plot_docks["3D Deformation"].box_lineplot.pos.shape == (1204, 3)
+    plot_value0 = app.plot_docks["3D Deformation"].box_lineplot.pos[-1, 1]
+    assert pytest.approx(plot_value0, 0.001) == 700.0
+
+    # set the slider
+    app.slider_group.child("y_axis", "Ryz").slider.setValue(3.0)
+
     # check model set
-    assert app.machine.model_params["Rxz"][1] == 3.0 * gc.slider_factors["Rxz"]
+    assert app.machine.model_params["Ryz"][1] == 3.0 * gc.slider_factors["Ryz"]
+    # check data for 3d plot has changed
+    box_dev1 = app.machine.boxes["prb_control_grp0"].grid_dev[1, -1]
+    assert box_dev1 != box_dev0
     # check 3d plot deformed
-    fixed = app.plot_docks["3D Deformation"].plot_widget.items[-2].pos[-1, 1]
-    deformed = app.plot_docks["3D Deformation"].box_lineplot.pos[-1, 1]
-    assert fixed == 600.0
-    assert deformed != fixed
+    plot_value1 = app.plot_docks["3D Deformation"].box_lineplot.pos[-1, 1]
+    assert plot_value1 != plot_value0
 
 
 def test_add_delete_mmt_group(qtbot, app):
@@ -89,7 +102,7 @@ def test_centre_on_cmm(qtbot, app):
     item = app.mmt_group.child("mmt_control_grp0", "grp_location", "centre")
     app.centre_on_cmm(item)
     new_loc = app.machine.measurements["mmt_control_grp0"].transform_mat[:-1, -1]
-    npt.assert_allclose(np.array([134.0, 34.0, 300.0]), new_loc, atol=1e-12)
+    npt.assert_allclose(np.array([84.0, 184.0, 200.0]), new_loc, atol=1e-12)
 
 
 def test_save_snapshot(qtbot, app, tmp_path):

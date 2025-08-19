@@ -196,7 +196,12 @@ class MainWindow(qtw.QMainWindow):
             type="group", title="Error Model", name="linear_model"
         )
         self.slider_group.addChild(
-            dict(type="bool", title="Show Polynomials", name="poly_option", value=False)
+            dict(
+                type="bool",
+                title="Show Polynomials",
+                name="poly_option",
+                value=False,
+            )
         )
 
         x_axis = self.slider_group.addChild(
@@ -213,31 +218,14 @@ class MainWindow(qtw.QMainWindow):
         )
 
         self.slider_axes = [x_axis, y_axis, z_axis, squareness]
-
+        axis_int = {"x": 0, "y": 1, "z": 2}
         for key, axis in gc.axis_group.items():
-            self.slider_axes[axis].addChild(
-                dict(
-                    type="slider",
-                    name=key,
-                    title=key,
-                    limits=[-5.0, 5.0],
-                    step=0.1,
-                    value=0,
-                    default=0,
-                ),
-            )
+            axis_letter = key[1]
+            axis_max = self.machine.cmm_model.size[axis_int[axis_letter]]
+            slider_factor = gc.slider_factors[key]
+            schild = gc.PolySliderGroup(key, slider_factor, axis_letter, axis_max)
+            self.slider_axes[axis].addChild(schild)
 
-            poly_txt = self.slider_axes[axis].addChild(
-                dict(
-                    type="str",
-                    name=key + "_poly",
-                    title="    poly",
-                    value="0.0, 1.0",
-                    default="0.0, 1.0",
-                ),
-            )
-            poly_txt.show(False)
-            self.poly_txts[key] = poly_txt
             # hide the squareness terms from the user
             self.slider_axes[3].hide()
 
@@ -247,56 +235,39 @@ class MainWindow(qtw.QMainWindow):
 
         self.slider_group.sigTreeStateChanged.connect(self.update_model)
 
-    def parse_poly_str(self, text: str) -> np.array:
-        """
-        take gui poly field input and return array of coefficients
-        """
-        try:
-            coeffs = [float(c) for c in text.split(",")]
-            coeffs = np.array(coeffs)
-        except ValueError:
-            coeffs = None
-        return coeffs
-
     def update_model(self, group, changes):
         """
         event callback for sliders
         """
+
         if self.freeze_gui:
             return
-        control_name = changes[0][0].name()
+        control = changes[0][0]
+        control_name = control.name()
         control_value = changes[0][2]
-        if control_name[:3] in dc.model_parameters_zero.keys():
-            slider_factor = gc.slider_factors[control_name[:3]]
 
-            slider = changes[0][0].parent().child(control_name[:3])
-            slider_value = slider.value()
-            poly_txt = changes[0][0].parent().child(control_name[:3] + "_poly")
-            coeffs = self.parse_poly_str(poly_txt.value())
-            if coeffs is None:
-                # can't interpret string in poly_txt
-                poly_txt.setValue("0.0, 1.0")
-                coeffs = np.array([0.0, 1.0])
-
-            self.machine.model_params[control_name[:3]] = list(
-                slider_value * slider_factor * coeffs
-            )
+        if isinstance(control, gc.PolySliderGroup):
+            # a slider was changed
+            control.update()
+            coeffs = control.coefficients
+            self.machine.model_params[control_name[:3]] = list(coeffs)
         elif control_name == "poly_option":
-            # show/hide controls
+            # show/hide controls for all PolySliderGroup children
             self.freeze_gui = True
-
-            for poly_txt in self.poly_txts.values():
-                poly_txt.show(control_value)
+            with self.slider_group.treeChangeBlocker():
+                for axis_group in self.slider_axes:
+                    for poly_slider in axis_group.children():
+                        poly_slider.show_equation(control_value)
             self.freeze_gui = False
         elif control_name == "btn_reset_all":
+            # reset the model back to default
+            self.freeze_gui = True
             self.machine.model_params = dc.model_parameters_zero.copy()
-            # update sliders
             with self.slider_group.treeChangeBlocker():
-                for axis_group in self.slider_group.children():
-                    for child in axis_group.children():
-                        "just reset sliders"
-                        if child.name() in dc.model_parameters_zero.keys():
-                            child.setValue(0.0)
+                for axis_group in self.slider_axes:
+                    for poly_slider in axis_group.children():
+                        poly_slider.reset()
+            self.freeze_gui = True
         self.replot()
 
     def make_probe_controls(self) -> Parameter:
