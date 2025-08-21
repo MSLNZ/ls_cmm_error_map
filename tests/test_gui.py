@@ -183,8 +183,10 @@ def test_snapshot_fixed(qtbot, app):
     mmt_balls, lines = app.plot_docks["plate0"].plot_data["mmt_control_grp0"]
     snap_data0 = np.array([snap_balls.xData, snap_balls.yData])
     mmt_data0 = np.array([mmt_balls.xData, mmt_balls.yData])
+
     # change the model
-    app.slider_group.child("x_axis", "Rxz").setValue(3.0)
+    app.slider_group.child("y_axis", "Ryz").slider.setValue(3.0)
+
     snap_data1 = np.array([snap_balls.xData, snap_balls.yData])
     mmt_data1 = np.array([mmt_balls.xData, mmt_balls.yData])
     # check the snapshot didn't respond to model change

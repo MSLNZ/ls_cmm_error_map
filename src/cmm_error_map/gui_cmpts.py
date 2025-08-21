@@ -597,6 +597,7 @@ class Plot3dDock(Dock):
         self.plot_data = {}
 
     def update_pens(self):
+        self.update_plot_plates()
         if len(self.plot_data) > 0:
             for mmt_name, list_items in self.plot_data.items():
                 balls, lines = list_items
