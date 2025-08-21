@@ -22,17 +22,17 @@ def app(qtbot):
     return widget
 
 
-def test_app_start(qtbot, app):
+def test_app_start(app):
     assert app.machine.cmm_model.title == "Legex574"
 
 
-def test_restore_state_plate(qtbot, app):
+def test_restore_state_plate(app):
     filename = cf.test_configs_path / "Legex-3-axis-6-prbs.pkl"
     app.restore_state_from_file(filename)
     assert app.machine.cmm_model.title == "Legex574"
 
 
-def test_restore_state_bar(qtbot, app):
+def test_restore_state_bar(app):
     filename = cf.test_configs_path / "stepgauge600.pkl"
     app.restore_state_from_file(filename)
     balls, lines = app.plot_docks["bar1"].plot_data["mmt_control_grp0"]
@@ -40,7 +40,7 @@ def test_restore_state_bar(qtbot, app):
     assert balls.opts["symbolPen"].color().getRgb() == (255, 0, 255, 255)
 
 
-def test_save_state(qtbot, app, tmp_path):
+def test_save_state(app, tmp_path):
     file_in = cf.test_configs_path / "Legex-XY-2-prbs.pkl"
     app.restore_state_from_file(file_in)
     file_out = tmp_path / "test.pkl"
@@ -50,7 +50,7 @@ def test_save_state(qtbot, app, tmp_path):
     assert state_dict["counts"] == {"probes": 2, "simulations": 2, "snapshots": 0}
 
 
-def test_set_model_slider(qtbot, app):
+def test_set_model_slider(app):
     # check the points are nominal before setting the slider
     # this just has the box points
     assert app.machine.boxes["prb_control_grp0"].grid_dev.shape == (3, 240)
@@ -74,7 +74,7 @@ def test_set_model_slider(qtbot, app):
     assert plot_value1 != plot_value0
 
 
-def test_add_delete_mmt_group(qtbot, app):
+def test_add_delete_mmt_group(app):
     nmmts = len(app.machine.measurements)
     app.add_new_mmt_group(app.mmt_group)
     assert len(app.machine.measurements) == nmmts + 1
@@ -86,7 +86,7 @@ def test_add_delete_mmt_group(qtbot, app):
     assert len(app.mmt_group.children()) == nmmts
 
 
-def test_add_delete_prb_group(qtbot, app):
+def test_add_delete_prb_group(app):
     nprbs = len(app.machine.probes)
     app.add_new_probe_group(app.prb_group)
     assert len(app.machine.probes) == nprbs + 1
@@ -98,14 +98,14 @@ def test_add_delete_prb_group(qtbot, app):
     assert len(app.prb_group.children()) == nprbs
 
 
-def test_centre_on_cmm(qtbot, app):
+def test_centre_on_cmm(app):
     item = app.mmt_group.child("mmt_control_grp0", "grp_location", "centre")
     app.centre_on_cmm(item)
     new_loc = app.machine.measurements["mmt_control_grp0"].transform_mat[:-1, -1]
     npt.assert_allclose(np.array([84.0, 184.0, 200.0]), new_loc, atol=1e-12)
 
 
-def test_save_snapshot(qtbot, app, tmp_path):
+def test_save_snapshot(app, tmp_path):
     """
     the actual save stuff has been covered in test_snapshots.py
     """
@@ -134,7 +134,7 @@ def test_save_snapshot(qtbot, app, tmp_path):
         assert fn.exists()
 
 
-def test_load_snapshot(qtbot, app):
+def test_load_snapshot(app):
     filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     assert len(app.snapshot_group.children()) == 1
@@ -144,7 +144,7 @@ def test_load_snapshot(qtbot, app):
     npt.assert_allclose(balls.pos[-1, :], np.array([782, 316, 582]), atol=1e-6)
 
 
-def test_restore_state_with_snapshot(qtbot, app, tmp_path):
+def test_restore_state_with_snapshot(app, tmp_path):
     # load a non-default state
     file_in = cf.test_configs_path / "Legex-XY-2-prbs.pkl"
     app.restore_state_from_file(file_in)
@@ -163,7 +163,7 @@ def test_restore_state_with_snapshot(qtbot, app, tmp_path):
     assert len(app.snapshot_group.children()) == 0
 
 
-def test_plot_snapshot_plate(qtbot, app):
+def test_plot_snapshot_plate(app):
     filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     # check we can plot snapshot in 2D
@@ -173,7 +173,7 @@ def test_plot_snapshot_plate(qtbot, app):
     npt.assert_allclose(balls.yData[-1], 532.95, atol=1e-6)
 
 
-def test_snapshot_fixed(qtbot, app):
+def test_snapshot_fixed(app):
     filename = cf.validation_path / "plate" / "snapshot.csv"
     app.load_snapshot_from_file(filename)
     app.add_new_plot_plate_dock(None)
@@ -195,7 +195,7 @@ def test_snapshot_fixed(qtbot, app):
     assert np.any(np.not_equal(mmt_data0, mmt_data1))
 
 
-def test_simple_save_restore(qtbot, app, tmp_path):
+def test_simple_save_restore(app, tmp_path):
     """
     this was giving errors when done manually - now passes
     """
@@ -237,3 +237,88 @@ def test_simple_save_restore(qtbot, app, tmp_path):
 
     # restore saved state
     app.restore_state_from_file(file_out)
+
+
+def test_toggle_plot_lines_3d(app):
+    """
+    test to cover showing and hiding plot lines in 3d dock
+    """
+    # on loading default plate simualation is shown
+    assert app.plot3d_dock.plot_controls.child("mmts_to_plot").value() == [
+        "Simulation 0"
+    ]
+    assert len(app.plot3d_dock.plot_data) == 1
+    # hide all simulations
+    app.plot3d_dock.plot_controls.child("mmts_to_plot").setValue([])
+    assert len(app.plot3d_dock.plot_data) == 0
+
+
+def test_toggle_plot_lines_plate(app):
+    """
+    test to cover showing and hiding plot lines in plate dock
+    """
+    # add a 2d plate dock
+    app.add_new_plot_plate_dock(None)
+    # set it to show default simulation
+    app.plot_docks["plate0"].mmts_to_plot.setValue(["Simulation 0"])
+    assert "plate0" in app.plot_docks
+    # hide it
+    app.plot_docks["plate0"].mmts_to_plot.setValue([])
+    # check there are no plot items for dock
+    assert len(app.plot_docks["plate0"].plot_data) == 0
+
+
+def test_toggle_plot_lines_bar(app):
+    """
+    test to cover showing and hiding plot lines in bar dock
+    """
+    # add a bar simulation
+    filename = cf.test_configs_path / "stepgauge600.pkl"
+    app.restore_state_from_file(filename)
+    # add a 2d bar dock
+    app.add_new_plot_bar_dock(None)
+    # set it to show default simulation
+    # check the stepgauge has been added to list
+    assert len(app.plot_docks["bar1"].mmts_to_plot.children()) == 1
+    # check it's set to visible - should be as we loaded a config
+    app.plot_docks["bar1"].mmts_to_plot.value() == ["Step gauge"]
+    # check its been plotted
+    assert "bar1" in app.plot_docks
+
+    # hide the plot
+    app.plot_docks["bar1"].mmts_to_plot.setValue([])
+
+    # check there are no plot items for dock
+    assert len(app.plot_docks["bar1"].plot_data) == 0
+
+
+def test_show_poly_coefficients(app):
+    # check show polys is off
+    assert app.slider_group.child("poly_option").value() is False
+    # check they're not visible
+    assert app.slider_group.child("z_axis", "Tzz", "Tzz_poly").opts["visible"] is False
+    # show polys
+    app.slider_group.child("poly_option").setValue(True)
+    assert app.slider_group.child("z_axis", "Tzz", "Tzz_poly").opts["visible"] is True
+    # check poly equation is showing
+    assert (
+        app.slider_group.child("z_axis", "Tzz").title()
+        == "Tzz = (0.0)·(0.0 + 1.0·z)·(1e-06)"
+    )
+
+
+def test_set_poly_coefficients(app):
+    app.slider_group.child("poly_option").setValue(True)
+    app.slider_group.child("z_axis", "Tzz", "Tzz_poly").setValue("0.0,1.0,0.2")
+    app.slider_group.child("z_axis", "Tzz").slider.setValue(3.0)
+    # check poly equation is showing
+    assert (
+        app.slider_group.child("z_axis", "Tzz").title()
+        == "Tzz = (3.0)·(0.0 + 1.0·z + (2.0e-01)·z²)·(1e-06)"
+    )
+    # check coefficients are set including slider factors
+    coeffs = app.slider_group.child("z_axis", "Tzz").coefficients
+    exp_coeffs = np.array([0.0, 3.0e-06, 6.0e-07])
+    npt.assert_allclose(coeffs, exp_coeffs, atol=1e-8)
+    # check model params are polynomial
+    npt.assert_allclose(app.machine.model_params["Tzz"], exp_coeffs, 1e-8)

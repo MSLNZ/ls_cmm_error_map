@@ -562,7 +562,7 @@ class Plot3dDock(Dock):
                 if mmt_name not in self.plot_data:
                     # need a new plot
                     self.plot_data[mmt_name] = plot3d_plate(self.plot_widget, mmt)
-                    self.update_pens()
+                    # self.update_pens()
 
                 # update plot
                 balls, lines = self.plot_data[mmt_name]
