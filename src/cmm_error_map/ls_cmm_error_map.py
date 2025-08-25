@@ -421,6 +421,9 @@ class MainWindow(qtw.QMainWindow):
         """
         if self.freeze_gui:
             return
+        if info is not None and info[0][0].name() == "artefact":
+            # change artefact needs to delete plot_data
+            self.update_machine()
         # keep the snapshots
         self.machine.measurements = {
             k: v for k, v in self.machine.measurements.items() if v.fixed

@@ -322,3 +322,20 @@ def test_set_poly_coefficients(app):
     npt.assert_allclose(coeffs, exp_coeffs, atol=1e-8)
     # check model params are polynomial
     npt.assert_allclose(app.machine.model_params["Tzz"], exp_coeffs, 1e-8)
+
+
+def test_3d_ball_color(app):
+    """
+    check when artefact changed the ball color changes correctly
+    this was a bug
+    """
+    c0 = app.plot3d_dock.plot_data["mmt_control_grp0"][0].color
+    assert len(c0) == 25
+    npt.assert_allclose(c0[0, :], np.array([1.0, 0.627, 0.157, 0.75]))  # orange
+    npt.assert_allclose(c0[-1, :], np.array([1, 1, 1, 0.75]))  # white
+
+    app.mmt_group.child("mmt_control_grp0", "artefact").setValue("Step Gauge 0600")
+    c1 = app.plot3d_dock.plot_data["mmt_control_grp0"][0].color
+    assert len(c1) == 31
+    npt.assert_allclose(c1[0, :], np.array([0.545, 0.863, 0.0, 0.75]))  # green
+    npt.assert_allclose(c1[-1, :], np.array([1.0, 0.2, 0.322, 0.75]))  # red
