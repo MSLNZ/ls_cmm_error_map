@@ -5,7 +5,7 @@ main gui for cmm error map app
 
 import datetime as dt
 
-# import logging
+import logging
 import pickle
 import sys
 from pathlib import Path

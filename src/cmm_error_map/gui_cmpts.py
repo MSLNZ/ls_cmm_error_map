@@ -16,6 +16,8 @@ from pyqtgraph.Qt.QtCore import Qt as qtc
 
 import cmm_error_map.data_cmpts as dc
 
+np.polynomial.set_default_printstyle('unicode')
+
 # logger = logging.getLogger(__name__)
 
 # =========== THEME===============

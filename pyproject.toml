@@ -1,13 +1,13 @@
 [project]
 name = "cmm-error-map"
-version = "0.1.0"
+version = "0.2.0"
 description = "Add your description here"
 authors = [
     { name = "elfnor", email = "elfnor@gmail.com" }
 ]
 dependencies = [
     "pyside6==6.7.2",
-    "numpy>=1.26.3",
+    "numpy==1.26.3",  # 2025-08-26 numpyv2.2.5 causes pyinstaller issues
     "scipy>=1.14.0",
     "pyqtgraph>=0.13.7",
     "pyopengl>=3.1.7",

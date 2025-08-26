@@ -1,7 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 
-config_data = [('config', 'config'), ('static','static')]
+config_data = [('src\cmm_error_map\config\*.toml', 'src\cmm_error_map\config'),
+               ('src\cmm_error_map\config\gui_configs\*.pkl', 'src\cmm_error_map\config\gui_configs'),
+               ('static','static'), ]
 
 a = Analysis(
     ['run_cmm_error_map.py'],
