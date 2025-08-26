@@ -8,6 +8,7 @@ This will help with using the ball-plate and gauge blocks to assess the CMM unce
 ## Progress
 
 - 2025-02-13 released version "0.1.0-awaiti"
+- 2025-08-26 released version "0.2.0-hurunui"
 
 
 ## Screenshots
