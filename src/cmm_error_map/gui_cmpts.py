@@ -1233,8 +1233,7 @@ class PolySliderGroup(Parameter):
                 domain=[0, self.axis_max],
                 window=[0, self.axis_max],
             )
-            # with np.printoptions(precision=1, suppress=True):
-            #     print(f"{self.polynomial}")
+
         else:
             self.polynomial = Polynomial(
                 coeffs,

@@ -56,6 +56,6 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=['*.vc14.dll'],
     name='run_cmm_error_map',
 )

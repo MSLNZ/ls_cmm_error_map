@@ -5,7 +5,6 @@ main gui for cmm error map app
 
 import datetime as dt
 
-import logging
 import pickle
 import sys
 from pathlib import Path
@@ -25,17 +24,14 @@ import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
-# logging.basicConfig(
-#     filename=cf.log_folder / "cmm_error_map.log",
-#     encoding="utf-8",
-#     filemode="w",
-#     format="%(asctime)s %(relativeCreated)8d %(levelname)-8s %(name)-30s %(funcName)-12s  %(message)s",
-#     datefmt="%Y-%m-%d %H:%M",
-#     level=logging.CRITICAL,
-# )
+
+
 
 DEBUG_BTN = True
 
+pyinstaller_base =  getattr(sys, '_MEIPASS', False)
+if pyinstaller_base:
+    DEBUG_BTN = False
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
@@ -52,6 +48,7 @@ class MainWindow(qtw.QMainWindow):
         self.setup_gui()
         self.freeze_gui = False
         self.update_machine()
+        cf.logger.info("gui loaded")
 
     def setup_gui(self):
         self.dock_area = DockArea()
@@ -795,6 +792,7 @@ class MainWindow(qtw.QMainWindow):
         or add to  summary etc.
         """
         print(f"{self.plot_docks['3D Deformation'].mmts_to_plot.value()=}")
+        cf.logger.info('in debug button code')
 
 
 def main():
