@@ -7,7 +7,7 @@ authors = [
 ]
 dependencies = [
     "pyside6==6.7.2",
-    "numpy==1.26.3",  # 2025-08-26 numpyv2.2.5 causes pyinstaller issues
+    "numpy==1.26.4",  # 2025-08-26 numpyv2.2.5 causes pyinstaller issues
     "scipy>=1.14.0",
     "pyqtgraph>=0.13.7",
     "pyopengl>=3.1.7",

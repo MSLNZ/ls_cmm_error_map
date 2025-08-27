@@ -13,5 +13,4 @@ try:
 except:
     pass
 
-print("Loading complete")
 main()

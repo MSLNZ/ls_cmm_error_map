@@ -796,18 +796,23 @@ class MainWindow(qtw.QMainWindow):
 
 
 def main():
+    cf.logger.info("Loading CMM Error Map GUI...")
+    cf.logger.info(f"version {__version__}")
+    cf.logger.info(f"Running from Pyinstaller exe {pyinstaller_base}")
+
     _app = pg.mkQApp("CMM Error Map App")
 
     qdarktheme.setup_theme(**gc.main_theme)
 
     w = MainWindow()
-    # logging.debug("MainWindow created")
+    cf.logger.info("MainWindow created")
     w.setWindowIcon(pg.QtGui.QIcon(cf.fn_icon.as_posix()))
     w.showMaximized()
     w.show()
-    # logging.debug("showing")
+    cf.logger.info("showing")
 
     pg.exec()
+    cf.logger.info("quitting")
 
 
 if __name__ == "__main__":
