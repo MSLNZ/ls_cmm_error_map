@@ -4,7 +4,6 @@ main gui for cmm error map app
 """
 
 import datetime as dt
-
 import pickle
 import sys
 from pathlib import Path
@@ -24,14 +23,12 @@ import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
-
-
-
 DEBUG_BTN = True
 
-pyinstaller_base =  getattr(sys, '_MEIPASS', False)
+pyinstaller_base = getattr(sys, "_MEIPASS", False)
 if pyinstaller_base:
     DEBUG_BTN = False
+
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
@@ -46,13 +43,11 @@ class MainWindow(qtw.QMainWindow):
         self.plot3d_dock = None
         self.freeze_gui = False
         self.setup_gui()
-        self.freeze_gui = False
         self.update_machine()
         cf.logger.info("gui loaded")
 
     def setup_gui(self):
         self.dock_area = DockArea()
-        self.summary = qtw.QTextEdit()
         self.make_model_gui()
         self.make_probe_controls()
         self.make_measurement_controls()
@@ -257,15 +252,19 @@ class MainWindow(qtw.QMainWindow):
                         poly_slider.show_equation(control_value)
             self.freeze_gui = False
         elif control_name == "btn_reset_all":
-            # reset the model back to default
-            self.freeze_gui = True
-            self.machine.model_params = dc.model_parameters_zero.copy()
-            with self.slider_group.treeChangeBlocker():
-                for axis_group in self.slider_axes:
-                    for poly_slider in axis_group.children():
-                        poly_slider.reset()
-            self.freeze_gui = True
+            self.reset_model()
+
         self.replot()
+
+    def reset_model(self):
+        # reset the model back to default
+        self.freeze_gui = True
+        self.machine.model_params = dc.model_parameters_zero.copy()
+        with self.slider_group.treeChangeBlocker():
+            for axis_group in self.slider_axes:
+                for poly_slider in axis_group.children():
+                    poly_slider.reset()
+        self.freeze_gui = True
 
     def make_probe_controls(self) -> Parameter:
         """
@@ -459,6 +458,8 @@ class MainWindow(qtw.QMainWindow):
         """
         recreate self.pens from current gui state
         """
+        if self.freeze_gui:
+            return
         self.pens = {}
         # update the pens for the snapshots
         if hasattr(self, "snapshot_group"):
@@ -730,21 +731,14 @@ class MainWindow(qtw.QMainWindow):
         self.restore_state_from_file(filename)
 
     def restore_state_from_file(self, filename):
-        self.freeze_gui = True
+        cf.logger.info(f"in restore state from file {filename}")
+
+        self.clear_all()
+
         with open(filename, "rb") as fp:
             state_dict = pickle.load(fp)
 
-        # main control panel
-        # remove existing children
-        self.prb_group.clearChildren()
-        self.mmt_group.clearChildren()
-        self.snapshot_group.clearChildren()
-
-        self.nprbs = 0
-        self.nmmts = 0
-        self.pens = {}
-
-        # add the right number back
+        # add correct number of default probes and simaulations
         for i in range(state_dict["counts"]["probes"]):
             self.add_new_probe_group(self.prb_group)
         for i in range(state_dict["counts"]["simulations"]):
@@ -757,13 +751,6 @@ class MainWindow(qtw.QMainWindow):
             self.control_group.child(group).restoreState(
                 state_dict["main_state"]["children"][group]
             )
-
-        # remove any existing docks
-
-        for dock in self.plot_docks.values():
-            # if dock.dock_name != "3D Deformation":
-            dock.close()
-            del dock
 
         self.update_pens()
 
@@ -783,16 +770,43 @@ class MainWindow(qtw.QMainWindow):
                 raise ValueError("Unknown dock type")
 
         self.dock_area.restoreState(state_dict["dock_area"])
-        self.freeze_gui = False
+
         self.update_machine()
+
+    def clear_all(self):
+        # restore  to clean slate
+        self.freeze_gui = True
+
+        limits = list(self.cmm_models.keys())
+        self.machine_group.setValue(limits[0])
+
+        # remove any existing docks
+        for dock in self.plot_docks.values():
+            # if dock.dock_name != "3D Deformation":
+            dock.close()
+            del dock
+
+        # main control panel
+        # remove existing children
+
+        self.prb_group.clearChildren()
+        self.mmt_group.clearChildren()
+        self.snapshot_group.clearChildren()
+
+        self.nprbs = 0
+        self.nmmts = 0
+        self.pens = {}
+
+        self.freeze_gui = False
+        cf.logger.info("clear all")
 
     def btn_debug(self):
         """
         print useful stuff here
         or add to  summary etc.
         """
-        print(f"{self.plot_docks['3D Deformation'].mmts_to_plot.value()=}")
-        cf.logger.info('in debug button code')
+
+        cf.logger.info("in debug button code")
 
 
 def main():

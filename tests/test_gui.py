@@ -32,8 +32,30 @@ def test_restore_state_plate(app):
     assert app.machine.cmm_model.title == "Legex574"
 
 
+def test_restore_state_plate_probes(app):
+    # there is a bug where the probes are both set to `pZ-short`
+    # fixed by removing freeze gui in restore_state_from_file
+
+    filename = cf.test_configs_path / "Legex-XY-2-prbs.pkl"
+    cf.logger.info(f"test_restore_state_plate_probes{filename}")
+    app.restore_state_from_file(filename)
+    assert len(app.machine.probes) == 2
+    assert app.nprbs == 2
+    assert app.machine.probes["prb_control_grp0"].title == "pZ-short"
+    assert app.machine.probes["prb_control_grp1"].title == "pZ-long"
+    assert app.prb_group.child("prb_control_grp0", "prb_title").value() == "pZ-short"
+    assert app.prb_group.child("prb_control_grp1", "prb_title").value() == "pZ-long"
+    assert (
+        app.mmt_group.child("mmt_control_grp0", "probe").value() == "prb_control_grp0"
+    )
+    assert (
+        app.mmt_group.child("mmt_control_grp1", "probe").value() == "prb_control_grp1"
+    )
+
+
 def test_restore_state_bar(app):
     filename = cf.test_configs_path / "stepgauge600.pkl"
+    cf.logger.info(f"test_restore_state_bar {filename}")
     app.restore_state_from_file(filename)
     balls, lines = app.plot_docks["bar1"].plot_data["mmt_control_grp0"]
     assert lines.opts["pen"].color().getRgb() == (255, 0, 255, 255)
@@ -339,3 +361,31 @@ def test_3d_ball_color(app):
     assert len(c1) == 31
     npt.assert_allclose(c1[0, :], np.array([0.545, 0.863, 0.0, 0.75]))  # green
     npt.assert_allclose(c1[-1, :], np.array([1.0, 0.2, 0.322, 0.75]))  # red
+
+
+def test_add_plate_dock_load_default_config(app):
+    # bug chasing - was failing
+    # make some changes
+
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").setValue(
+        "Simulation 0"
+    )
+
+    # restore default state
+    app.restore_state_from_file(cf.test_configs_path / "default_config.pkl")
+    assert app.machine.cmm_model.title == "Legex574"
+
+
+def test_reload_default_config(app, tmp_path):
+    # bug chasing - was failing
+    # load a non-default state
+
+    file_in = cf.test_configs_path / "Legex-XY-2-prbs.pkl"
+    app.restore_state_from_file(file_in)
+
+    # reload the default state
+    file_in = cf.test_configs_path / "default_config.pkl"
+    app.restore_state_from_file(file_in)
+
+    assert app.machine.cmm_model.title == "Legex574"
