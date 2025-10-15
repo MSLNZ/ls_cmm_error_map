@@ -276,8 +276,6 @@ class MainWindow(qtw.QMainWindow):
             name="probes_group",
             addText="Add Probe",
         )
-        self.add_new_probe_group(self.prb_group)
-        self.add_new_probe_group(self.prb_group)
 
         self.update_probes()
         self.prb_group.sigAddNew.connect(self.add_new_probe_group)
@@ -377,7 +375,7 @@ class MainWindow(qtw.QMainWindow):
             name="mmt_group",
             addText="Add Simulation",
         )
-        self.add_new_mmt_group(self.mmt_group)
+
         self.mmt_group.sigAddNew.connect(self.add_new_mmt_group)
         self.mmt_group.sigTreeStateChanged.connect(self.update_measurements)
 
@@ -686,11 +684,6 @@ class MainWindow(qtw.QMainWindow):
         for dock in self.plot_docks.values():
             dock.replot()
 
-        # if self.plot3d_dock:
-        #     self.plot3d_dock.replot()
-        # for dock in self.plot_mmt_docks:
-        #     dock.replot()
-
     def save_state(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(
             self, "Save File", dir="config.pkl", filter="pickle files (*.pkl)"
@@ -716,9 +709,7 @@ class MainWindow(qtw.QMainWindow):
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock in self.plot_docks.values():
             state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState()
-            # state_dict["docks"][dock.dock_name] = dock.plot_controls.saveState(
-            #     filter="user"
-            # )
+
         with open(filename, "wb") as fp:
             pickle.dump(state_dict, fp)
 
@@ -731,6 +722,7 @@ class MainWindow(qtw.QMainWindow):
         self.restore_state_from_file(filename)
 
     def restore_state_from_file(self, filename):
+        qtw.QApplication.setOverrideCursor(qtc.CursorShape.WaitCursor)
         cf.logger.info(f"in restore state from file {filename}")
 
         self.clear_all()
@@ -738,31 +730,31 @@ class MainWindow(qtw.QMainWindow):
         with open(filename, "rb") as fp:
             state_dict = pickle.load(fp)
 
-        # add correct number of default probes and simaulations
+        # add correct number of default probes and simulations
         for i in range(state_dict["counts"]["probes"]):
             self.add_new_probe_group(self.prb_group)
         for i in range(state_dict["counts"]["simulations"]):
             self.add_new_mmt_group(self.mmt_group)
 
         # don't put any snapshots back as we haven't saved the data
-
+        self.freeze_gui = True
         # restore state of main control panel
         for group in ["machine", "probes_group", "mmt_group"]:
             self.control_group.child(group).restoreState(
                 state_dict["main_state"]["children"][group]
             )
-
-        self.update_pens()
+        self.freeze_gui = False
+        # self.update_pens()
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock_name, dock_state in state_dict["docks"].items():
             if dock_name[0] == "p":
                 self.add_new_plot_plate_dock(None, name=dock_name)
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
-
             elif dock_name[0] == "b":
                 self.add_new_plot_bar_dock(None, name=dock_name)
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+
             elif dock_name[0] == "3":
                 self.add_3d_dock()
                 self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
@@ -772,6 +764,7 @@ class MainWindow(qtw.QMainWindow):
         self.dock_area.restoreState(state_dict["dock_area"])
 
         self.update_machine()
+        qtw.QApplication.restoreOverrideCursor()
 
     def clear_all(self):
         # restore  to clean slate
@@ -782,7 +775,6 @@ class MainWindow(qtw.QMainWindow):
 
         # remove any existing docks
         for dock in self.plot_docks.values():
-            # if dock.dock_name != "3D Deformation":
             dock.close()
             del dock
 

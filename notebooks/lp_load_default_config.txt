@@ -1,0 +1,50 @@
+Timer unit: 1e-06 s
+
+Total time: 0.952163 s
+File: /home/elfnor/gits/ls_cmm_error_map/src/cmm_error_map/ls_cmm_error_map.py
+Function: MainWindow.restore_state_from_file at line 733
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   733                                               def restore_state_from_file(self, filename):
+   734         2       1011.9    506.0      0.1          cf.logger.info(f"in restore state from file {filename}")
+   735                                           
+   736         2      31210.9  15605.5      3.3          self.clear_all()
+   737                                           
+   738         4         82.1     20.5      0.0          with open(filename, "rb") as fp:
+   739         2        298.5    149.3      0.0              state_dict = pickle.load(fp)
+   740                                           
+   741                                                   # add correct number of default probes and simulations
+   742         4          7.3      1.8      0.0          for i in range(state_dict["counts"]["probes"]):
+   743         2     101259.9  50630.0     10.6              self.add_new_probe_group(self.prb_group)
+   744         4          7.9      2.0      0.0          for i in range(state_dict["counts"]["simulations"]):
+   745         2     299353.4 149676.7     31.4              self.add_new_mmt_group(self.mmt_group)
+   746                                           
+   747                                                   # don't put any snapshots back as we haven't saved the data
+   748                                           
+   749                                                   # restore state of main control panel
+   750         8          5.6      0.7      0.0          for group in ["machine", "probes_group", "mmt_group"]:
+   751        12     207696.0  17308.0     21.8              self.control_group.child(group).restoreState(
+   752         6          6.2      1.0      0.0                  state_dict["main_state"]["children"][group]
+   753                                                       )
+   754                                           
+   755         2         78.8     39.4      0.0          self.update_pens()
+   756                                           
+   757         2          8.8      4.4      0.0          _containers, self.plot_docks = self.dock_area.findAll()
+   758         4          4.4      1.1      0.0          for dock_name, dock_state in state_dict["docks"].items():
+   759         2          1.2      0.6      0.0              if dock_name[0] == "p":
+   760                                                           self.add_new_plot_plate_dock(None, name=dock_name)
+   761                                                           self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   762                                           
+   763         2          0.8      0.4      0.0              elif dock_name[0] == "b":
+   764                                                           self.add_new_plot_bar_dock(None, name=dock_name)
+   765                                                           self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   766         2          0.7      0.3      0.0              elif dock_name[0] == "3":
+   767         2     147523.9  73761.9     15.5                  self.add_3d_dock()
+   768         2       6509.5   3254.7      0.7                  self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   769                                                       else:
+   770                                                           raise ValueError("Unknown dock type")
+   771                                           
+   772         2      61457.2  30728.6      6.5          self.dock_area.restoreState(state_dict["dock_area"])
+   773                                           
+   774         2      95637.5  47818.8     10.0          self.update_machine()

@@ -51,3 +51,11 @@ omit = [
     "pyscript",
     "signature_bootstrap.py",
 ]
+
+
+[tool.line_profiler.kernprof]
+line-by-line = true
+rich = true
+verbose = true
+skip-zero = true
+prof-mod = ['cmm_error_map.data_cmpts.Measurement.recalculate']

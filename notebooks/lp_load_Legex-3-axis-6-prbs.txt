@@ -1,0 +1,50 @@
+Timer unit: 1e-06 s
+
+Total time: 8.37025 s
+File: /home/elfnor/gits/ls_cmm_error_map/src/cmm_error_map/ls_cmm_error_map.py
+Function: MainWindow.restore_state_from_file at line 733
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   733                                               def restore_state_from_file(self, filename):
+   734         2        817.5    408.7      0.0          cf.logger.info(f"in restore state from file {filename}")
+   735                                           
+   736         2      31764.8  15882.4      0.4          self.clear_all()
+   737                                           
+   738         4         81.3     20.3      0.0          with open(filename, "rb") as fp:
+   739         2        340.0    170.0      0.0              state_dict = pickle.load(fp)
+   740                                           
+   741                                                   # add correct number of default probes and simulations
+   742         9         12.9      1.4      0.0          for i in range(state_dict["counts"]["probes"]):
+   743         7     914931.9 130704.6     10.9              self.add_new_probe_group(self.prb_group)
+   744         9         12.0      1.3      0.0          for i in range(state_dict["counts"]["simulations"]):
+   745         7    1632070.2 233152.9     19.5              self.add_new_mmt_group(self.mmt_group)
+   746                                           
+   747                                                   # don't put any snapshots back as we haven't saved the data
+   748                                           
+   749                                                   # restore state of main control panel
+   750         8          5.4      0.7      0.0          for group in ["machine", "probes_group", "mmt_group"]:
+   751        12    3772799.7 314400.0     45.1              self.control_group.child(group).restoreState(
+   752         6          6.2      1.0      0.0                  state_dict["main_state"]["children"][group]
+   753                                                       )
+   754                                           
+   755         2        197.5     98.7      0.0          self.update_pens()
+   756                                           
+   757         2          8.8      4.4      0.0          _containers, self.plot_docks = self.dock_area.findAll()
+   758         7          9.2      1.3      0.0          for dock_name, dock_state in state_dict["docks"].items():
+   759         5          3.5      0.7      0.0              if dock_name[0] == "p":
+   760         3     352889.4 117629.8      4.2                  self.add_new_plot_plate_dock(None, name=dock_name)
+   761         3      73986.0  24662.0      0.9                  self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   762                                           
+   763         2          0.8      0.4      0.0              elif dock_name[0] == "b":
+   764                                                           self.add_new_plot_bar_dock(None, name=dock_name)
+   765                                                           self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   766         2          0.7      0.3      0.0              elif dock_name[0] == "3":
+   767         2     176538.8  88269.4      2.1                  self.add_3d_dock()
+   768         2      18877.3   9438.6      0.2                  self.plot_docks[dock_name].plot_controls.restoreState(dock_state)
+   769                                                       else:
+   770                                                           raise ValueError("Unknown dock type")
+   771                                           
+   772         2     201874.3 100937.1      2.4          self.dock_area.restoreState(state_dict["dock_area"])
+   773                                           
+   774         2    1193023.1 596511.5     14.3          self.update_machine()
