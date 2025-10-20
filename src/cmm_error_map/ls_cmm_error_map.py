@@ -473,7 +473,7 @@ class MainWindow(qtw.QMainWindow):
         for dock in self.plot_docks.values():
             dock.pens = self.pens
             dock.update_pens()
-            dock.update_measurement_list()
+            # dock.update_measurement_list()
         self.set_mmt_colors()
 
     def set_mmt_colors(self):

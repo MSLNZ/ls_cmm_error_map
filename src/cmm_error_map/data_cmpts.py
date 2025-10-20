@@ -162,8 +162,8 @@ class Measurement:
     mmt_nominal: np.ndarray  # (3, n) the nominal position of the balls in artefact CSY
     mmt_dev: np.ndarray  # (3, n) the deformed - nominal position in artefact CSY
     fixed: bool = False  # if True, data does not change with model parameters
-    _last_model_params: dict[str, float | list[float]] = None
-    _last_cmm_model_title: str = None
+    # _last_model_params: dict[str, float | list[float]] = None
+    # _last_cmm_model_title: str = None
 
     def recalculate(
         self, model_params: dict[str, float | list[float]], cmm_model: MachineType

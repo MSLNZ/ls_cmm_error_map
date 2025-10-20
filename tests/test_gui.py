@@ -389,3 +389,38 @@ def test_reload_default_config(app, tmp_path):
     app.restore_state_from_file(file_in)
 
     assert app.machine.cmm_model.title == "Legex574"
+
+
+def test_reload_plate_plot_selection(app):
+    filename = cf.test_configs_path / "Legex-3-axis-6-prbs.pkl"
+    app.restore_state_from_file(filename)
+    assert len(app.plot_docks["plate0"].plot_controls.child("mmts_to_plot").value()) > 0
+
+
+def test_set_plate_plot_selection(app, tmp_path):
+    """
+    test restore also restore selection in  mmts_to_plot
+    """
+    # add a new simulation
+    for i in range(6):
+        app.add_new_mmt_group(app.mmt_group)
+
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    # select some simulations to plot in plate dock
+    limits = (
+        app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").opts["limits"]
+    )
+    to_plot = limits[2:4]
+    app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").setValue(to_plot)
+    # save this config to file
+    file_out = tmp_path / "test.pkl"
+    app.save_state_to_file(file_out)
+
+    # restore default
+    app.restore_state_from_file(cf.test_configs_path / "default_config.pkl")
+
+    # restore saved state
+    app.restore_state_from_file(file_out)
+    # check the same simulations are checked
+    checked = app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").value()
+    assert checked == to_plot
