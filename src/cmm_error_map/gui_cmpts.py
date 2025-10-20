@@ -14,9 +14,10 @@ from pyqtgraph.dockarea.Dock import Dock, DockLabel
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.Qt.QtCore import Qt as qtc
 
+import cmm_error_map.config as cf
 import cmm_error_map.data_cmpts as dc
 
-np.polynomial.set_default_printstyle('unicode')
+np.polynomial.set_default_printstyle("unicode")
 
 # logger = logging.getLogger(__name__)
 
@@ -101,6 +102,13 @@ dock3d_control_grp = {
     "title": "▼",
     "type": "group",
     "children": [
+        {
+            "name": "mouse_ctrls",
+            "title": "Mouse Controls",
+            "type": "list",
+            "limits": {"Default": "default", "PCDMIS": "pcdmis"},
+            "value": "default",
+        },
         {
             "name": "probe_box",
             "title": "Probe for Box Deformation",
@@ -367,6 +375,75 @@ def set_children_readonly(param, readonly):
 # MARK: 3D plots
 
 
+class GLViewWidgetMouseCtrls(gl.GLViewWidget):
+    """
+    over ride mouse controls in 3D view
+    to allow different keymaps
+    currently
+    GLViewWidgetMouseCtrls(mousectrl="default")
+    or
+    GLViewWidgetMouseCtrls(mousectrl="pcdmis")
+    """
+
+    def __init__(self, *args, rotationMethod="euler", mousectrl="default", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.mousectrl = mousectrl
+
+    def mouseMoveEvent(self, ev):
+        lpos = ev.position() if hasattr(ev, "position") else ev.localPos()
+        if not hasattr(self, "mousePos"):
+            self.mousePos = lpos
+        diff = lpos - self.mousePos
+        self.mousePos = lpos
+
+        mode = ""
+
+        if self.mousectrl == "default":
+            if ev.buttons() == qtc.MouseButton.LeftButton:
+                if ev.modifiers() & qtc.KeyboardModifier.ControlModifier:
+                    mode = "m1"
+                else:
+                    mode = "m2"
+            elif ev.buttons() == qtc.MouseButton.MiddleButton:
+                if ev.modifiers() & qtc.KeyboardModifier.ControlModifier:
+                    mode = "m3"
+                else:
+                    mode = "m4"
+
+        elif self.mousectrl == "pcdmis":
+            if ev.buttons() == qtc.MouseButton.RightButton:
+                if ev.modifiers() & qtc.KeyboardModifier.ControlModifier:
+                    # CTRL-RMB drag - 3D rotation
+                    mode = "m2"
+                else:
+                    # RMB drag - pan
+                    mode = "m1"
+            elif ev.buttons() == qtc.MouseButton.MiddleButton:
+                # MMB drag - 3D rotation
+                mode = "m2"
+
+        # four different operations
+
+        if mode == "m1":
+            # Moves the center (look-at) position while holding the camera in place.
+            # away from the camera is fixed
+            self.pan(diff.x(), diff.y(), 0, relative="view")
+        elif mode == "m2":
+            # Orbits the camera around the center position
+            self.orbit(-diff.x(), diff.y())
+
+        elif mode == "m3":
+            # If "view-upright", then x is in the global xy plane and
+            # points to the right side of the view, y is in the
+            # global xy plane and orthogonal to x, and z points in
+            # the global z direction.
+            # fixed y
+            self.pan(diff.x(), 0, diff.y(), relative="view-upright")
+        elif mode == "m4":
+            # fixed z
+            self.pan(diff.x(), diff.y(), 0, relative="view-upright")
+
+
 def plot3d_axis(w):
     # axis items
     org = gl.GLScatterPlotItem(
@@ -490,7 +567,7 @@ class Plot3dDock(Dock):
         self.box_lineplot: gl.GLLinePlotItem = None
         self.pens: dict[str, list[qtg.QPen]] = {}
 
-        self.plot_widget = gl.GLViewWidget()
+        self.plot_widget = GLViewWidgetMouseCtrls(mousectrl="default")
         self.add_control_tree()
 
         self.addWidget(self.plot_widget)
@@ -501,6 +578,9 @@ class Plot3dDock(Dock):
         adds the controls that go in the side bar of each 3d plot
         """
         self.plot_controls = Parameter.create(**dock3d_control_grp)
+
+        mouse_ctrls = self.plot_controls.child("mouse_ctrls")
+        mouse_ctrls.sigValueChanged.connect(self.change_mouse_ctrls)
 
         slider_mag = self.plot_controls.child("slider_mag")
         slider_mag.sigValueChanged.connect(self.change_magnification)
@@ -581,6 +661,18 @@ class Plot3dDock(Dock):
         """
         self.magnification = control.value()
         self.replot()
+
+    def change_mouse_ctrls(self, control):
+        """
+        event handler for changing mouse controls
+        """
+        cf.logger.info(f"Changing mouse control {control.value()=}")
+        try:
+            value = control.value()
+            self.plot_widget.mousectrl = value
+            cf.logger.info(f"Changing mouse contorl to {value}")
+        except KeyError:
+            return
 
     def update_measurement_list(self):
         """
