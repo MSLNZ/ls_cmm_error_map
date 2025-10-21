@@ -426,13 +426,25 @@ def test_set_plate_plot_selection(app, tmp_path):
     assert checked == to_plot
 
 
-@pytest.mark.skip(reason="not written yet")
 def test_plate_dock_fixed_grid(app):
     """
     wrong sized fixed grid sometimes shows up on restoring a config
     bug chasing
     """
-    pass
+    # this is crude but should catch bug
+    # add plate dock
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    # set simulation to plot
+    app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").setValue(
+        ["Simulation 0"]
+    )
+    # get number of plotted items in plate dock
+    pw_item_count1 = len(app.plot_docks["plate_test"].plot_widget.items())
+    # restore the problem config
+    filename = cf.test_configs_path / "config_for_grid_test.pkl"
+    app.restore_state_from_file(filename)
+    pw_item_count2 = len(app.plot_docks["plate0"].plot_widget.items())
+    assert pw_item_count1 == pw_item_count2
 
 
 def test_change_simulation_name(app):

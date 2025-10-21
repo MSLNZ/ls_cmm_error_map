@@ -852,7 +852,10 @@ class PlotPlateDock(Dock):
         self.tree.move(0, 0)
 
     def update_machine(self, machine: dc.Machine):
+        self.plot_widget.clear()
+        self.plot_data = {}
         self.machine = machine
+        self.update_display()
 
     def update_display(self):
         self.update_pens()
