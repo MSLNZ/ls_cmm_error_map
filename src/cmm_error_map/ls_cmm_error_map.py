@@ -83,11 +83,9 @@ class MainWindow(qtw.QMainWindow):
         btn_restore_state.sigActivated.connect(self.restore_state)
 
         btn_default_state = self.control_group.addChild(
-            dict(type="action", name="btn_default_state", title="Clear All")
+            dict(type="action", name="btn_default_state", title="Reset All")
         )
-        btn_default_state.sigActivated.connect(
-            lambda: self.restore_state_from_file(filename=cf.default_config_fn)
-        )
+        btn_default_state.sigActivated.connect(self.reset_all)
 
         # button for debug purposes
         if DEBUG_BTN:
@@ -265,6 +263,14 @@ class MainWindow(qtw.QMainWindow):
                 for poly_slider in axis_group.children():
                     poly_slider.reset()
         self.freeze_gui = True
+
+    def reset_all(self):
+        """
+        reset model sliders to zero
+        load default config
+        """
+        self.reset_model()
+        self.restore_state_from_file(cf.default_config_fn)
 
     def make_probe_controls(self) -> Parameter:
         """
@@ -450,6 +456,8 @@ class MainWindow(qtw.QMainWindow):
             self.machine.measurements[mmt_name] = mmt
 
         self.update_pens()
+        for dock in self.plot_docks.values():
+            dock.update_measurement_list()
         self.replot()
 
     def update_pens(self):
@@ -473,7 +481,6 @@ class MainWindow(qtw.QMainWindow):
         for dock in self.plot_docks.values():
             dock.pens = self.pens
             dock.update_pens()
-            # dock.update_measurement_list()
         self.set_mmt_colors()
 
     def set_mmt_colors(self):
@@ -630,6 +637,7 @@ class MainWindow(qtw.QMainWindow):
         """
         param.parent().setOpts(title=param.value())
         self.update_measurements()
+        cf.logger.info(f'changed simulation title to "{param.value()}"')
 
     def add_3d_dock(self):
         """
@@ -744,7 +752,6 @@ class MainWindow(qtw.QMainWindow):
                 state_dict["main_state"]["children"][group]
             )
         self.freeze_gui = False
-        # self.update_pens()
 
         _containers, self.plot_docks = self.dock_area.findAll()
         for dock_name, dock_state in state_dict["docks"].items():
@@ -762,7 +769,7 @@ class MainWindow(qtw.QMainWindow):
                 raise ValueError("Unknown dock type")
 
         self.dock_area.restoreState(state_dict["dock_area"])
-
+        self.freeze_gui = False
         self.update_machine()
         qtw.QApplication.restoreOverrideCursor()
 

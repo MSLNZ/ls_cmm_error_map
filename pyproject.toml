@@ -58,4 +58,4 @@ line-by-line = true
 rich = true
 verbose = true
 skip-zero = true
-prof-mod = ['cmm_error_map.data_cmpts.Measurement.recalculate']
+prof-mod = ['cmm_error_map.ls_cmm_error_map.MainWindow.update_model']

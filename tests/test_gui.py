@@ -424,3 +424,51 @@ def test_set_plate_plot_selection(app, tmp_path):
     # check the same simulations are checked
     checked = app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").value()
     assert checked == to_plot
+
+
+@pytest.mark.skip(reason="not written yet")
+def test_plate_dock_fixed_grid(app):
+    """
+    wrong sized fixed grid sometimes shows up on restoring a config
+    bug chasing
+    """
+    pass
+
+
+def test_change_simulation_name(app):
+    """
+    changing simulation name should update list in "To Plot" lists in docks
+    bug chasing
+    """
+    # add plate dock
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    # change simulation name
+    new_title = "new sim title"
+    app.mmt_group.child("mmt_control_grp0", "mmt_title").setValue(new_title)
+    # check its in list in 3d dock
+    to_plot = app.plot3d_dock.plot_controls.child("mmts_to_plot").opts["limits"]
+    assert new_title in to_plot
+    # check its in list in plate dock
+    to_plot = (
+        app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").opts["limits"]
+    )
+    assert new_title in to_plot
+
+
+def test_adding_simulation_updates_dock_plot_list(app):
+    """
+    adding simulation should update list in "To Plot" lists in docks
+    bug chasing
+    """
+    # add plate dock
+    app.add_new_plot_plate_dock(None, name="plate_test")
+    # add simulation
+    app.add_new_mmt_group(app.mmt_group)
+    # check its in list in 3d dock
+    to_plot = app.plot3d_dock.plot_controls.child("mmts_to_plot").opts["limits"]
+    assert len(to_plot) == 2
+    # check its in list in plate dock
+    to_plot = (
+        app.plot_docks["plate_test"].plot_controls.child("mmts_to_plot").opts["limits"]
+    )
+    assert len(to_plot) == 2
