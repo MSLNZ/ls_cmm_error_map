@@ -23,7 +23,7 @@ import cmm_error_map.data_cmpts as dc
 import cmm_error_map.gui_cmpts as gc
 from cmm_error_map import __version__
 
-DEBUG_BTN = True
+DEBUG_BTN = False
 
 pyinstaller_base = getattr(sys, "_MEIPASS", False)
 if pyinstaller_base:
