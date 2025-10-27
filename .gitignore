@@ -10,3 +10,6 @@ wheels/
 .venv
 
 .vscode
+
+videos/BL_proxy/
+videos/to_edit/
